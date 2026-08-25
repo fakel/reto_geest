@@ -616,9 +616,11 @@ vitest.config.ts                        (modified: include worker tests)
 
 ---
 
-## T-17: CDK Infrastructure
+## T-17: CDK Infrastructure ✅ COMPLETED
 
 **Objective:** Define the AWS CDK stacks for the full infrastructure.
+
+**Run checks:** `cdk synth` succeeds for all 4 stacks (NetworkStack, DatabaseStack, QueueStack, ApiStack). Both Lambda bundles compile (worker 5.2MB, api 6.7MB). Full `npm run typecheck` (api + worker + infra) and `npm run lint` clean; `npm run test` → 97 passing (unchanged).
 
 **Files to create/modify:**
 
@@ -634,9 +636,11 @@ infra/lib/api-stack.ts
 - VPC with private + public subnets
 - NAT Gateway in public subnet
 - Internet Gateway
+- **Single AZ (maxAzs: 1), single NAT gateway** for a free-tier-leaning, cost-minimal deploy
 
 **`database-stack.ts` spec:**
-- RDS PostgreSQL instance (db.t4g.micro, engine 16.x)
+- RDS PostgreSQL instance (**db.t3.micro — free-tier eligible**, engine 16.x)
+- **Single AZ (multiAz: false)**
 - Security group allowing Lambda VPC ingress on port 5432
 - Credentials stored in Secrets Manager
 - Output: DATABASE_URL secret ARN
@@ -658,10 +662,10 @@ infra/lib/api-stack.ts
 - Instantiate stacks in order: Network → Database → Queue → API
 
 **Acceptance Criteria:**
-- [ ] `cdk synth` succeeds without errors
-- [ ] Generated CloudFormation templates include all resources
-- [ ] Lambda functions reference correct handler paths
-- [ ] Environment variables are properly wired
+- [x] `cdk synth` succeeds without errors
+- [x] Generated CloudFormation templates include all resources (VPC/NAT/IGW, RDS 16 + Secret, SQS main + DLQ with redrive, API + Worker Lambdas, HTTP API Gateway)
+- [x] Lambda functions reference correct handler paths (api `lambda.ts` → `handler`, worker `index.ts` → `handler`)
+- [x] Environment variables are properly wired (DATABASE_URL, NOTIFICATION_QUEUE_URL, DLQ_URL, NOTIFY_URL, RATE_LIMIT_*)
 
 **Commit message:** `feat(infra): add CDK stacks for VPC, RDS, SQS/DLQ, API Lambda, and Worker Lambda`
 

@@ -473,9 +473,11 @@ packages/api/tests/idempotency.test.ts
 
 ---
 
-## T-13: Rate Limiting Plugin (US-10)
+## T-13: Rate Limiting Plugin (US-10) ✅ COMPLETED
 
 **Objective:** Protect the API with configurable rate limiting.
+
+**Run tests:** `npm run test` → 84 passing (incl. 4 in `rate-limit.test.ts`). `tsc --noEmit` and `eslint` clean. `buildTestApp` is now `async` (awaits plugin registration — required by `@fastify/rate-limit` v10).
 
 **Files to create/modify:**
 
@@ -490,9 +492,10 @@ packages/api/tests/rate-limit.test.ts
 - Custom error response builder → `{ error: { code: "RATE_LIMIT_EXCEEDED", message: "..." } }`
 
 **Tests (`tests/rate-limit.test.ts`):**
-- [ ] Requests under limit succeed
-- [ ] Requests over limit return 429 with Retry-After header
-- [ ] Error format matches standard `{ error: { code, message } }` structure
+- [x] Requests under limit succeed
+- [x] Requests over limit return 429 with Retry-After header
+- [x] Error format matches standard `{ error: { code, message } }` structure
+- [x] Limits are per IP (different IPs are unaffected)
 
 **Commit message:** `feat(api): add rate limiting plugin with configurable limits`
 

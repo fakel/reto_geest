@@ -118,7 +118,7 @@ packages/api/src/services/errors.ts
 
 ---
 
-## T-04: Prisma Client Singleton & Test Setup
+## T-04: Prisma Client Singleton & Test Setup ✅ COMPLETED
 
 **Objective:** Create the Prisma client singleton and the pg-mem test setup infrastructure.
 
@@ -151,13 +151,15 @@ vitest.config.ts              (root or api-level)
 - Configure test globals
 
 **Acceptance Criteria:**
-- [ ] `database.ts` exports a working Prisma client
-- [ ] `setup.ts` creates pg-mem instance, applies schema, resets between tests
-- [ ] `helpers.ts` factories create valid records in pg-mem
-- [ ] A smoke test using pg-mem + Prisma client passes (create user, read user)
-- [ ] `buildTestApp()` returns Fastify instance that responds to requests
+- [x] `database.ts` exports a working Prisma client
+- [x] `setup.ts` creates pg-mem instance, applies schema, resets between tests
+- [x] `helpers.ts` factories create valid records in pg-mem
+- [x] A smoke test using pg-mem + Prisma client passes (create user, read user)
+- [x] `buildTestApp()` returns Fastify instance that responds to requests
 
 **Commit message:** `test(api): add Prisma client singleton, pg-mem setup, and test helpers`
+
+> **Note (T-04 implemented):** The approved pg-mem + `@prisma/adapter-pg` setup does not work with Prisma ORM v7.9 (the adapter's `instanceof pg.Pool` check treats pg-mem's fake pool as a real pool → TCP connect; and its OID-based column mapping requires `field.dataTypeID`, which pg-mem does not provide). In its place, T-04 added a custom Prisma v7 driver adapter (`packages/api/tests/pg-mem-driver.ts`) that runs the exact Prisma-generated SQL against pg-mem and maps column types from `field.typeId`. This applies to all remaining tasks. Two pg-mem quirks handled: reset tables individually (no multi-table TRUNCATE) and inline bound args as SQL literals (pg-mem cannot convert JS booleans/Dates in `bind()`).
 
 ---
 

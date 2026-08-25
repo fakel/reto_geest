@@ -339,9 +339,11 @@ packages/api/tests/completions.test.ts
 
 ---
 
-## T-09: SQS Plugin & Decorator
+## T-09: SQS Plugin & Decorator ✅ COMPLETED
 
 **Objective:** Create the Fastify SQS plugin that decorates the app with an SQS client for dependency injection in services.
+
+**Run tests:** `npm run test` → 65 passing (incl. 5 in `sqs.test.ts`). `tsc --noEmit` and `eslint` clean. Added `fastify-plugin` as a direct dependency of `packages/api`.
 
 **Files to create:**
 
@@ -358,10 +360,10 @@ packages/api/src/plugins/sqs.ts
 - Read `NOTIFICATION_QUEUE_URL` and `DLQ_URL` from config
 
 **Acceptance Criteria:**
-- [ ] Plugin registers successfully on Fastify instance
-- [ ] `fastify.sqs.sendMessage()` is callable
-- [ ] In test mode, SQS calls can be replaced with mocks (already used in T-08 tests)
-- [ ] Unit tests verify plugin registration and decoration
+- [x] Plugin registers successfully on Fastify instance
+- [x] `fastify.sqs.sendMessage()` is callable
+- [x] In test mode, SQS calls can be replaced with mocks (already used in T-08 tests)
+- [x] Unit tests verify plugin registration and decoration
 
 **Commit message:** `feat(api): add SQS Fastify plugin with client decorator`
 

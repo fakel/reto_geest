@@ -164,31 +164,47 @@ push a main / manual ──► CI (lint + typecheck + test) ──► CD (synth 
 
 **c) Adjuntar la policy de permisos al rol** (mínima suficiente para CDK):
 
+`iam:PassRole` se acota a los roles creados por CDK (prefijo `reto-geest-*`) y a los servicios que CDK/las Lambdas usan (`iam:PassedToService`), evitando wildcard total. `ecr:*` se omite porque las Lambdas no usan ECR (bundle vía `NodejsFunction` → S3).
+
 ```json
 {
   "Version": "2012-10-17",
   "Statement": [
     {
+      "Sid": "ManageInfraResources",
       "Effect": "Allow",
       "Action": [
         "cloudformation:*",
         "s3:*",
-        "ecr:*",
         "ec2:*",
         "rds:*",
         "sqs:*",
         "lambda:*",
         "apigateway:*",
         "secretsmanager:*",
-        "iam:PassRole",
-        "iam:CreateRole",
-        "iam:AttachRolePolicy",
-        "iam:GetRole",
-        "iam:PutRolePolicy",
         "ssm:*",
-        "logs:*"
+        "logs:*",
+        "iam:CreateRole",
+        "iam:GetRole",
+        "iam:AttachRolePolicy",
+        "iam:PutRolePolicy"
       ],
       "Resource": "*"
+    },
+    {
+      "Sid": "PassRolesToServices",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::*:role/reto-geest-*",
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": [
+            "lambda.amazonaws.com",
+            "ec2.amazonaws.com",
+            "cloudformation.amazonaws.com"
+          ]
+        }
+      }
     }
   ]
 }

@@ -432,6 +432,10 @@ packages/api/src/schemas/error.schema.ts
 
 **Objective:** Implement global idempotency for all POST endpoints via Fastify hooks.
 
+**Run tests:** `npm run test` → 80 passing (incl. 7 in `idempotency.test.ts`). `tsc --noEmit` and `eslint` clean. Added required env vars to the global test `setup.ts` so plugins parse successfully in all tests.
+
+> **Added (T-12 amendment):** `cleanupExpiredKeys` is now exposed via an admin route — `POST /admin/idempotency/cleanup → 200 { deleted }` in `routes/admin.ts` — so expired idempotency rows can be purged on demand instead of leaving bulk cleanup unwired. T-15 will extend `routes/admin.ts` with the DLQ endpoint.
+
 **Files to create/modify:**
 
 ```
@@ -457,12 +461,13 @@ packages/api/tests/idempotency.test.ts
 - Uses UUIDv7 for the `id` field
 
 **Tests (`tests/idempotency.test.ts`):**
-- [ ] POST with Idempotency-Key → 201, second identical request → same cached response
-- [ ] POST with different Idempotency-Key → processes normally (new record)
-- [ ] POST without Idempotency-Key → processes normally
-- [ ] Concurrent requests with same key → one succeeds, second gets 409 IDEMPOTENCY_CONFLICT
-- [ ] Expired idempotency key → new request creates new record
-- [ ] Different methods/paths with same key → processed independently
+- [x] POST with Idempotency-Key → 201, second identical request → same cached response
+- [x] POST with different Idempotency-Key → processes normally (new record)
+- [x] POST without Idempotency-Key → processes normally
+- [x] Concurrent requests with same key → one succeeds, second gets 409 IDEMPOTENCY_CONFLICT
+- [x] Expired idempotency key → new request creates new record
+- [x] Different methods/paths with same key → processed independently
+- [x] POST /admin/idempotency/cleanup purges expired keys and reports the count
 
 **Commit message:** `feat(api): add global idempotency plugin via Idempotency-Key header`
 

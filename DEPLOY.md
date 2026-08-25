@@ -160,7 +160,13 @@ push a main / manual ──► CI (lint + typecheck + test) ──► CD (synth 
   ]
 }
 ```
-> Sustituye `ACCOUNT_ID`, `TU_USUARIO`, `TU_REPO`. El `sub` restringe el rol al branch `main` (ajusta si usas `workflow_dispatch` desde otro branch).
+> Sustituye `ACCOUNT_ID`, `TU_USUARIO`, `TU_REPO`. ⚠️ **Importante:** el job `deploy` define el **environment `production`** de GitHub. Cuando un job usa un `environment`, el claim `sub` del token OIDC cambia al formato `repo:<usuario>@<id_usuario>/<repo>@<id_repo>:environment:<nombre>` (en vez de `:ref:refs/heads/main`) — incluso en pushes. Usa `StringLike` con comodines para los IDs:
+
+```json
+"StringLike": {
+  "token.actions.githubusercontent.com:sub": "repo:TU_USUARIO@*:TU_REPO@*:environment:production"
+}
+```
 
 **c) Adjuntar la policy de permisos al rol** (mínima suficiente para CDK):
 

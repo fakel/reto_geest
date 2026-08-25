@@ -30,8 +30,12 @@ export interface QueueStackProps extends cdk.StackProps {
 export class QueueStack extends cdk.Stack {
   /** URL of the main notification queue (consumed by the API to enqueue). */
   public readonly notificationQueueUrl: string;
+  /** ARN of the main notification queue (for IAM grants). */
+  public readonly notificationQueueArn: string;
   /** URL of the dead letter queue (polled by the API admin endpoint). */
   public readonly dlqQueueUrl: string;
+  /** ARN of the dead letter queue (for IAM grants). */
+  public readonly dlqQueueArn: string;
 
   constructor(scope: Construct, id: string, props: QueueStackProps) {
     super(scope, id, props);
@@ -57,10 +61,14 @@ export class QueueStack extends cdk.Stack {
       handler: 'handler',
       memorySize: 256,
       timeout: cdk.Duration.seconds(30),
-      reservedConcurrentExecutions: 5,
       vpc: props.vpc,
       securityGroups: [props.lambdaSecurityGroup],
-      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
+      // Pin the Worker to the first AZ so it egresses through the single NAT
+      // instance (only Private-Subnet-1 has the NAT route).
+      vpcSubnets: {
+        subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+        availabilityZones: [props.vpc.availabilityZones[0]],
+      },
       environment: {
         DATABASE_URL: props.databaseUrl,
         NOTIFY_URL: props.notifyUrl,
@@ -83,7 +91,9 @@ export class QueueStack extends cdk.Stack {
     );
 
     this.notificationQueueUrl = notificationQueue.queueUrl;
+    this.notificationQueueArn = notificationQueue.queueArn;
     this.dlqQueueUrl = dlq.queueUrl;
+    this.dlqQueueArn = dlq.queueArn;
 
     new cdk.CfnOutput(this, 'NotificationQueueUrl', {
       value: this.notificationQueueUrl,

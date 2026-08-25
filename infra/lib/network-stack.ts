@@ -7,11 +7,13 @@ import { Construct } from 'constructs';
  *
  * Creates the shared VPC plus a shared security group used by all application
  * Lambdas. Configured for a cost-efficient, free-tier-friendly deploy:
- *   - Single Availability Zone (single-AZ footprint).
+ *   - Two Availability Zones, because RDS DB subnet groups must span ≥2 AZs
+ *     (AWS hard requirement — subnets themselves are free).
  *   - A NAT *instance* on `t3.micro` (Amazon Linux, Prebuilt NAT AMI) instead
  *     of a managed NAT gateway — cheaper per hour (~1/4 the cost) and
  *     free-tier-eligible for new accounts. CDK configures routing + user-data
- *     automatically via `NatInstanceProvider`.
+ *     automatically via `NatInstanceProviderV2`.
+ *   - `natGateways: 1` keeps a SINGLE NAT instance (first AZ only).
  * Private subnets (network egress via the NAT instance) and one public subnet.
  * The VPC and the Lambda security group are exposed so downstream stacks
  * (database, queue, api) can place their resources inside the same network and
@@ -32,17 +34,29 @@ export class NetworkStack extends cdk.Stack {
     const natProvider = new ec2.NatInstanceProviderV2({
       instanceType: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MICRO),
       machineImage: ec2.MachineImage.latestAmazonLinux2023(),
-      defaultAllowedTraffic: ec2.NatTrafficDirection.OUTBOUND_ONLY,
+      // NAT instances must accept the reply traffic for their forwarded
+      // connections. INBOUND_AND_OUTBOUND adds allow-from-anywhere ingress
+      // (OUTBOUND_ONLY leaves the SG with NO ingress rules, breaking egress).
+      defaultAllowedTraffic: ec2.NatTrafficDirection.INBOUND_AND_OUTBOUND,
     });
 
+    // Configurable VPC CIDR (default 10.0.0.0/16). Make it explicit so each
+    // stack/environment on the same AWS account can use a disjoint range and
+    // avoid "CIDR conflicts with another subnet" when other stacks already use
+    // the default prefix. Empty/unset falls back to the default.
+    const vpcCidr = process.env.VPC_CIDR?.trim() || '10.0.0.0/16';
+
     this.vpc = new ec2.Vpc(this, 'Vpc', {
-      // Single AZ to stay on the free tier and keep costs minimal.
-      maxAzs: 1,
-      // One NAT instance provides egress for the private subnets.
+      // RDS requires a DB subnet group spanning at least 2 AZs, so the network
+      // must span 2 AZs. Subnets are free; the cost savings stay in the NAT
+      // (single t3.micro instance) and the single-AZ RDS instance below.
+      maxAzs: 2,
+      // One NAT instance (first AZ) provides egress for the app's private
+      // subnets.
       natGateways: 1,
       // NAT instance (EC2) instead of a managed NAT gateway.
       natGatewayProvider: natProvider,
-      ipAddresses: ec2.IpAddresses.cidr('10.0.0.0/16'),
+      ipAddresses: ec2.IpAddresses.cidr(vpcCidr),
       subnetConfiguration: [
         {
           name: 'Private',

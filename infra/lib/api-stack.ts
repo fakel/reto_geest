@@ -13,7 +13,11 @@ export interface ApiStackProps extends cdk.StackProps {
   /** Security group applied to the API Lambda. */
   readonly lambdaSecurityGroup: ec2.SecurityGroup;
   readonly databaseUrl: string;
+  /** ARN of the notification queue (for IAM grants). */
+  readonly notificationQueueArn: string;
   readonly notificationQueueUrl: string;
+  /** ARN of the dead letter queue (for IAM grants). */
+  readonly dlqArn: string;
   readonly dlqUrl: string;
   readonly rateLimitMax?: string;
   readonly rateLimitWindowMs?: string;
@@ -41,10 +45,14 @@ export class ApiStack extends cdk.Stack {
       handler: 'handler',
       memorySize: 512,
       timeout: cdk.Duration.seconds(29),
-      reservedConcurrentExecutions: 100,
       vpc: props.vpc,
       securityGroups: [props.lambdaSecurityGroup],
-      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
+      // Pin the API to the first AZ so it egresses through the single NAT
+      // instance (only Private-Subnet-1 has the NAT route).
+      vpcSubnets: {
+        subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+        availabilityZones: [props.vpc.availabilityZones[0]],
+      },
       environment: {
         DATABASE_URL: props.databaseUrl,
         NOTIFICATION_QUEUE_URL: props.notificationQueueUrl,
@@ -62,10 +70,11 @@ export class ApiStack extends cdk.Stack {
       }),
     );
     // Allow the API to publish to the notification queue and poll the DLQ.
+    // Grant on the QUEUE ARNs (not URLs) — IAM requires ARNs here.
     apiLambda.addToRolePolicy(
       new iam.PolicyStatement({
         actions: ['sqs:SendMessage', 'sqs:ReceiveMessage', 'sqs:DeleteMessage'],
-        resources: [props.notificationQueueUrl, props.dlqUrl],
+        resources: [props.notificationQueueArn, props.dlqArn],
       }),
     );
 

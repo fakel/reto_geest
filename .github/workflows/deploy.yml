@@ -36,6 +36,8 @@ env:
   # Suffix embedded in every CloudFormation stack name (e.g. reto-geest-<env>-api)
   # to avoid collisions with other stacks on the same AWS account.
   STACK_ENV: ${{ vars.STACK_ENV || 'dev' }}
+  # Optional VPC CIDR override to avoid subnet CIDR conflicts on shared accounts.
+  VPC_CIDR: ${{ vars.VPC_CIDR || '' }}
 
 jobs:
   # ---------------------------------------------------------------------------

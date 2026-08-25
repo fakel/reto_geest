@@ -65,7 +65,9 @@ new ApiStack(app, 'ApiStack', {
   vpc: network.vpc,
   lambdaSecurityGroup: network.lambdaSecurityGroup,
   databaseUrl: database.databaseUrl,
+  notificationQueueArn: queue.notificationQueueArn,
   notificationQueueUrl: queue.notificationQueueUrl,
+  dlqArn: queue.dlqQueueArn,
   dlqUrl: queue.dlqQueueUrl,
 });
 

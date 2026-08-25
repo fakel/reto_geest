@@ -21,9 +21,22 @@ export function createPrismaClient(pool: Pool): PrismaClient {
 /** Lazily-resolved application singleton using the real database. */
 let singleton: PrismaClient | undefined;
 
+/**
+ * pg Pool options. RDS PostgreSQL requires SSL (`rds.force_ssl`); without it
+ * the server rejects the connection ("no pg_hba.conf entry ... no encryption").
+ * `rejectUnauthorized: false` is required for RDS's self-signed-style CA chain
+ * (traffic is still encrypted). Tests inject their own pool/client.
+ */
+function buildPool(connectionString: string): Pool {
+  return new Pool({
+    connectionString,
+    ssl: { rejectUnauthorized: false },
+  });
+}
+
 export function getPrisma(): PrismaClient {
   if (!singleton) {
-    singleton = createPrismaClient(new Pool({ connectionString: getEnv().databaseUrl }));
+    singleton = createPrismaClient(buildPool(getEnv().databaseUrl));
   }
   return singleton;
 }

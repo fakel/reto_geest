@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { completeTask, type SqsSender } from '../services/complete.service';
+import { getEnv } from '../config/env';
 
 /**
  * Completion route (US-04).
@@ -45,9 +46,14 @@ export async function completionRoutes(app: FastifyInstance): Promise<void> {
     const { userId } = req.body as CompleteBody;
     // The SQS sender is decorated on the instance (a real client in prod from
     // the SQS plugin, a mock/override in tests). Missing sender only matters
-    // on the archive path, where the service throws 500.
+    // on the archive path, where the service throws 500. The queue URL comes
+    // from the environment (NOTIFICATION_QUEUE_URL) so the archive enqueue
+    // targets the right queue.
     const sqs = (app as unknown as { sqs?: SqsSender }).sqs;
-    const result = await completeTask(idTask, userId, { sqs });
+    const result = await completeTask(idTask, userId, {
+      sqs,
+      queueUrl: getEnv().notificationQueueUrl,
+    });
     return reply.status(200).send(result);
   });
 }

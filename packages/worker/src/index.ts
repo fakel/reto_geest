@@ -56,8 +56,15 @@ let prismaSingleton: PrismaClient | undefined;
 
 export function getPrisma(): PrismaClient {
   if (!prismaSingleton) {
+    // RDS requires SSL (`rds.force_ssl`); rejectUnauthorized:false keeps the
+    // connection encrypted while accepting RDS's CA chain.
     prismaSingleton = new PrismaClient({
-      adapter: new PrismaPg(new Pool({ connectionString: getEnv().databaseUrl })),
+      adapter: new PrismaPg(
+        new Pool({
+          connectionString: getEnv().databaseUrl,
+          ssl: { rejectUnauthorized: false },
+        }),
+      ),
     });
   }
   return prismaSingleton;

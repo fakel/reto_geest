@@ -103,9 +103,15 @@ RETO GEEST/
 │       │   ├── notification-log.ts # Insert de NotificationAttempt en RDS
 │       │   └── config/env.ts   # DATABASE_URL + NOTIFY_URL
 │       └── tests/              # worker.test.ts + setup pg-mem propio
-├── infra/                      # Infraestructura AWS CDK (VPC, RDS, SQS/DLQ, Lambdas) [T-17]
-│   ├── bin/                    # app.ts (entrada CDK)
-│   └── lib/                    # stacks (network, database, queue, api)
+├── infra/                      # Infraestructura AWS CDK (VPC, RDS, SQS/DLQ, Lambdas)
+│   ├── bin/
+│   │   └── app.ts              # Entrada CDK: Network → Database → Queue → API
+│   └── lib/
+│       ├── network-stack.ts    # VPC (single AZ) + NAT + SG compartido de Lambdas
+│       ├── database-stack.ts   # RDS PostgreSQL 16 (t3.micro free tier) + Secret
+│       ├── queue-stack.ts      # SQS principal + DLQ + Worker Lambda (event source)
+│       └── api-stack.ts        # API Lambda + HTTP API Gateway ($default)
+├── cdk.out/                    # Salida de `cdk synth` (gitignored)
 ├── .kilo/specs/                # Especificaciones del proyecto (SDD: requirements, design, tasks)
 ├── vitest.config.ts            # Config Vitest (setupFiles + inclusion de tests)
 ├── .husky/                     # Hooks de git (commit-msg, pre-commit)
@@ -139,7 +145,27 @@ En la carpeta `.kilo/specs/` podrá encontrar las especificaciones iniciales (re
 | T-14 | ✅ Completado (app factory + Lambda handler + dev server) |
 | T-15 | ✅ Completado (admin DLQ endpoint) |
 | T-16 | ✅ Completado (worker SQS + webhook delivery) |
-| T-17 a T-18 | ⏸️ Pendiente (CDK infra, E2E finales) |
+| T-17 | ✅ Completado (CDK infra: single-AZ + single-NAT) |
+| T-18 | ⏸️ Pendiente (E2E finales) |
+
+## Despliegue en AWS (CDK)
+
+La infraestructura se define como código en `infra/` con **AWS CDK v2** y se compone de 4 stacks en orden: **Network → Database → Queue → API**.
+
+- **`NetworkStack`** — VPC single-AZ (una AZ, 1 subnet privada + 1 pública) con **1 NAT gateway** para egress de las Lambdas, y SG compartido de Lambdas.
+- **`DatabaseStack`** — RDS PostgreSQL 16 (`db.t3.micro`, *free-tier*), single-AZ, no público; credenciales auto-generadas en **Secrets Manager**; expone `DATABASE_URL` resuelto en deploy.
+- **`QueueStack`** — SQS principal (`maxReceiveCount: 3`, visibility 30s) con **DLQ** (retención 14 días) + **Worker Lambda** (NodeJS 24.x) con event source SQS.
+- **`ApiStack`** — **API Lambda** (NodeJS 24.x, 512 MB, 29s) expuesta por **API Gateway HTTP API** (`$default` → proxy), con colas y rate-limit cableados.
+
+Comandos (desde `infra/`):
+
+```bash
+npm run synth    # cdk synth — valida y genera cdk.out/
+npm run deploy   # cdk deploy --all — despliega los 4 stacks
+npm run diff     # cdk diff — cambios pendientes
+```
+
+> Requiere credenciales AWS configuradas (`aws configure` / SSO) y `NOTIFY_URL` en el entorno para el Worker. Diseño orientado a *free tier* (single-AZ, `db.t3.micro`, 1 NAT), con la salvedad de que el NAT gateway de egress es el único costo recurrente no cubierto por el tier gratuito.
 
 ## Nota
 
@@ -168,3 +194,4 @@ Se ha decidido usar Fastify sobre Express por gusto y diversidad.
 - T-14: DeepSeek V4 Flash/$0.04 [commit 58beb5c]
 - T-15: DeepSeek V4 Flash/$0.04 [commit 977671d]
 - T-16: DeepSeek V4 Flash/$0.06 [commit 22959c6]
+- T-17: DeepSeek V4 Flash/$0.09 [commit a7380c0]

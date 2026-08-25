@@ -671,9 +671,11 @@ infra/lib/api-stack.ts
 
 ---
 
-## T-18: Integration & E2E Tests
+## T-18: Integration & E2E Tests ✅ COMPLETED
 
 **Objective:** Full end-to-end tests covering the complete workflow and regression suite.
+
+**Run tests:** `npm run test` → 104 passing (incl. 5 in `full-workflow.test.ts` + 2 in `concurrent-archive.test.ts`). `tsc --noEmit` (api/worker/infra) and `eslint` clean. Suite now spans 17 test files across api + worker.
 
 **Files to create/modify:**
 
@@ -684,16 +686,16 @@ packages/api/tests/e2e/
 ```
 
 **`full-workflow.test.ts`:**
-- [ ] Full happy path: create 2 users → create task → assign both → user1 completes (not archived) → user2 completes (archived) → verify archived status → verify notifications endpoint
-- [ ] Edge cases: archived task rejection, duplicate assignment, duplicate completion
+- [x] Full happy path: create 2 users → create task → assign both → user1 completes (not archived) → user2 completes (archived) → verify archived status → verify notifications endpoint
+- [x] Edge cases: archived task rejection, duplicate assignment, duplicate completion
 
 **`concurrent-archive.test.ts`:**
-- [ ] OCC conflict simulation: two requests try to complete the last assignment simultaneously
+- [x] OCC conflict simulation: two requests try to complete the last assignment simultaneously
 
 **Acceptance Criteria:**
-- [ ] Full workflow test passes
-- [ ] Concurrent archive test verifies VERSION_CONFLICT
-- [ ] All 8 test files pass: `npm run test`
+- [x] Full workflow test passes
+- [x] Concurrent archive test verifies VERSION_CONFLICT
+- [x] All tests pass: `npm run test` (104 across 17 files)
 
 **Commit message:** `test(api): add end-to-end workflow and concurrency tests`
 

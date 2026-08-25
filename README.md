@@ -146,7 +146,7 @@ En la carpeta `.kilo/specs/` podrá encontrar las especificaciones iniciales (re
 | T-15 | ✅ Completado (admin DLQ endpoint) |
 | T-16 | ✅ Completado (worker SQS + webhook delivery) |
 | T-17 | ✅ Completado (CDK infra: single-AZ + single-NAT) |
-| T-18 | ⏸️ Pendiente (E2E finales) |
+| T-18 | ✅ Completado (E2E: full workflow + OCC concurrencia) |
 
 ## Despliegue en AWS (CDK)
 
@@ -195,3 +195,4 @@ Se ha decidido usar Fastify sobre Express por gusto y diversidad.
 - T-15: DeepSeek V4 Flash/$0.04 [commit 977671d]
 - T-16: DeepSeek V4 Flash/$0.06 [commit 22959c6]
 - T-17: DeepSeek V4 Flash/$0.09 [commit a7380c0]
+- T-18: DeepSeek V4 Flash/$0.09 [commit 00e9bfa]

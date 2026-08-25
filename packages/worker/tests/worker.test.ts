@@ -1,6 +1,7 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { handler, type SQSEvent } from '../src/index';
 import { postWebhook, type WebhookResult } from '../src/webhook';
+import { parseEnv } from '../src/config/env';
 import { prisma } from './setup';
 import { randomUUID } from 'node:crypto';
 
@@ -145,5 +146,39 @@ describe('T-16: Worker SQS consumer', () => {
     } finally {
       globalThis.fetch = originalListen;
     }
+  });
+
+  it('does not crash and routes to DLQ when NOTIFY_URL is not configured', async () => {
+    const taskId = await makeTask();
+    // env without a webhook URL → delivery disabled.
+    const envNoNotify = { databaseUrl: 'postgresql://x@localhost/db', nodeEnv: 'test' };
+    const deliver = vi.fn();
+
+    const event = buildEvent([{ taskId, title: 'T', status: 'archived' }], {
+      ApproximateReceiveCount: '1',
+    });
+
+    // Never attempts delivery → throws so SQS retries into the DLQ.
+    await expect(
+      handler(event, { prisma, env: envNoNotify, postWebhookFn: deliver as never }),
+    ).rejects.toThrow(/NOTIFY_URL is not configured/);
+
+    expect(deliver).not.toHaveBeenCalled();
+
+    // A failed attempt is still logged so the notifications history is accurate.
+    const attempts = await prisma.notificationAttempt.findMany({ where: { taskId } });
+    expect(attempts).toHaveLength(1);
+    expect(attempts[0].status).toBe('failed');
+    expect(attempts[0].responseBody).toMatch(/NOTIFY_URL is not configured/);
+  });
+
+  it('parseEnv tolerates an empty NOTIFY_URL (does not throw)', () => {
+    const env = parseEnv({
+      DATABASE_URL: 'postgresql://user:pass@localhost:5432/test',
+      NOTIFY_URL: '   ',
+      NODE_ENV: 'test',
+    });
+    expect(env.notifyUrl).toBeUndefined();
+    expect(env.databaseUrl).toBe('postgresql://user:pass@localhost:5432/test');
   });
 });

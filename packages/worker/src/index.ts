@@ -19,6 +19,11 @@ import { logAttempt } from './notification-log';
  * (3) attempts, move the message to the DLQ. Responsive errors (4xx) are
  * recorded as failed attempts and the message is consumed normally.
  *
+ * NOTIFY_URL FALLBACK: if the webhook URL is not configured (empty/undefined),
+ * the worker never attempts delivery — it logs a failed attempt and throws so
+ * the message is retried by SQS and eventually ends up in the DLQ, instead of
+ * crashing the Lambda.
+ *
  * The handler accepts optional deps (`prisma`, `env`, `postWebhookFn`) purely
  * for unit testing; production uses the real defaults.
  */
@@ -80,6 +85,11 @@ export async function handler(
 
     let result: WebhookResult;
     try {
+      // Fallback: no webhook configured → never attempt delivery. Log a
+      // failed attempt and throw so SQS retries the message into the DLQ.
+      if (!env.notifyUrl) {
+        throw new Error('NOTIFY_URL is not configured; message routed to DLQ');
+      }
       result = await deliver(env.notifyUrl, payload);
     } catch (err) {
       // Transient failure (5xx/timeout/network). Record the failed attempt so

@@ -45,9 +45,11 @@ Copia `.env.example` → `.env` y ajusta los valores (ver sección de variables 
 | Variable | Uso | ¿Necesaria en synth? |
 |----------|-----|----------------------|
 | `DATABASE_URL` | `prisma generate` / config de Prisma | Sí (placeholder vale) |
-| `NOTIFY_URL` | Worker → webhook objetivo | **Sí** (para el `QueueStack`) |
+| `NOTIFY_URL` | Worker → webhook objetivo | Sí (para el `QueueStack`) |
 | `AWS_REGION` | Región de despliegue | Sí |
 | `STACK_ENV` | Etiqueta del entorno en el nombre de los stacks (default `dev`) | Opcional |
+
+> **Fallback de `NOTIFY_URL`:** si queda **vacía/sin configurar**, el Worker no crashea: **no intenta entregar** y lanza al procesar el mensaje, de modo que SQS lo reintenta y lo **desvía a la DLQ** tras `maxReceiveCount` (3) intentos. Útil para entornos de prueba sin webhook real. `DATABASE_URL` sí sigue siendo obligatoria.
 
 > **Nombres de stack (colisión-safe):** los stacks reciben nombres CloudFormation explícitos `reto-geest-<STACK_ENV>-<tipo>` (p. ej. `reto-geest-dev-api`). Usa un `STACK_ENV` distinto por entorno (dev → stage → prod) y por cuenta para que coexistan sin colisionar.
 

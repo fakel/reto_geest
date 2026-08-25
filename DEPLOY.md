@@ -160,11 +160,11 @@ push a main / manual ──► CI (lint + typecheck + test) ──► CD (synth 
   ]
 }
 ```
-> Sustituye `ACCOUNT_ID`, `TU_USUARIO`, `TU_REPO`. ⚠️ **Importante:** el job `deploy` define el **environment `production`** de GitHub. Cuando un job usa un `environment`, el claim `sub` del token OIDC cambia al formato `repo:<usuario>@<id_usuario>/<repo>@<id_repo>:environment:<nombre>` (en vez de `:ref:refs/heads/main`) — incluso en pushes. Usa `StringLike` con comodines para los IDs:
+> Sustituye `ACCOUNT_ID`, `TU_USUARIO`, `TU_REPO`. ⚠️ **Importante:** el job `deploy` define el **environment `production`** de GitHub. Cuando un job usa un `environment`, el claim `sub` del token OIDC cambia al formato `repo:<usuario>@<id_usuario>/<repo>@<id_repo>:environment:<nombre>` (en vez de `:ref:refs/heads/main`) — incluso en pushes. Usa `StringLike` con comodines (ojo con el **`/`** entre owner y repo):
 
 ```json
 "StringLike": {
-  "token.actions.githubusercontent.com:sub": "repo:TU_USUARIO@*:TU_REPO@*:environment:production"
+  "token.actions.githubusercontent.com:sub": "repo:TU_USUARIO@*/TU_REPO@*:environment:production"
 }
 ```
 

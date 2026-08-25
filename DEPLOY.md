@@ -252,7 +252,15 @@ Repo → Settings → **Environments** → **New environment** → `production`.
 
    Fija cuánto esperar por petición con `SMOKE_TIMEOUT_MS` (por defecto 15000). El script imprime cada comprobación y sale con código 0 si todo pasó, o 1 si algo falló (válido para CI).
 
-5. Revisa los logs de Lambda (CloudWatch) para confirmar que el Worker entregó el webhook.
+5. **E2E continua (monitorización):** suite que corre en bucle hasta que se detiene (Ctrl+C), ejecutando cada ronda un escenario completo de flujos de éxito y error (usuarios, tareas, asignación, completado/archivo, notificaciones, DLQ) y acumulando resultados por check:
+
+   ```bash
+   API_URL="<API_URL>" npm run e2e:continuous
+   ```
+
+   Variables útiles: `E2E_API_URL` (o `API_URL`), `E2E_INTERVAL_MS` (pausa entre rondas, default 10000), `E2E_MAX_ROUNDS`, `E2E_ONCE=1` (una ronda, para CI), `E2E_FAIL_FAST=1`, `E2E_VERIFY_NOTIFICATION=1` (verifica que el Worker persiste la notificación), `E2E_LOG_DIR`/`E2E_LOG_FILE` (ruta del log). Cada corrida escribe **`logs/e2e-<fecha-hora>.log`** con una línea por check incluyendo datos relevantes de la respuesta (ids, `error.code`, `archived`, conteos de notificaciones/DLQ). Al salir imprime un resumen con la tasa de éxito por check y sale `0`/`1`. Si la API responde `429` (rate limit), sube `RATE_LIMIT_MAX` en la `ApiStack` o aumenta `E2E_INTERVAL_MS`.
+
+6. Revisa los logs de Lambda (CloudWatch) para confirmar que el Worker entregó el webhook.
 
 ---
 

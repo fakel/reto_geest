@@ -18,6 +18,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "smoke:deploy": "node scripts/smoke-deploy.mjs",
+    "e2e:continuous": "node scripts/e2e-continuous.mjs",
     "prepare": "husky"
   },
   "devDependencies": {

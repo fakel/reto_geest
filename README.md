@@ -60,6 +60,7 @@ npm run dev
 | `npm run db:generate` | Genera el Prisma Client (lee `prisma.config.ts`) |
 | `npm run db:migrate` | Migraciones de Prisma (dev) |
 | `npm run smoke:deploy` | Smoke-test del despliegue AWS (`API_URL=...`) |
+| `npm run e2e:continuous` | **E2E continua** contra el despliegue (bucle hasta Ctrl+C, acumulado por check, log a `logs/e2e-<fecha>.log` con datos de respuesta) |
 
 > Nota: `npm run test` usa `--passWithNoTests` para que el pipeline CI salga limpio hasta que existan suites de pruebas (a partir de T-04). A día de hoy la suite pasa **106 tests** en 17 archivos (api + worker), sin necesidad de Docker/PostgreSQL (pg-mem).
 
@@ -114,7 +115,8 @@ RETO GEEST/
 │       ├── queue-stack.ts      # SQS principal + DLQ + Worker Lambda (event source)
 │       └── api-stack.ts        # API Lambda + HTTP API Gateway ($default)
 ├── scripts/
-│   └── smoke-deploy.mjs        # Smoke-test del despliegue en Node (npm run smoke:deploy)
+│   ├── smoke-deploy.mjs        # Smoke-test del despliegue en Node (npm run smoke:deploy)
+│   └── e2e-continuous.mjs      # E2E continua (bucle hasta salir, log por fecha con datos de respuesta, npm run e2e:continuous)
 ├── cdk.out/                    # Salida de `cdk synth` (gitignored)
 ├── .kilo/specs/                # Especificaciones del proyecto (SDD: requirements, design, tasks)
 ├── vitest.config.ts            # Config Vitest (setupFiles + inclusion de tests)
@@ -173,6 +175,12 @@ Verificación post-despliegue (desde la raíz):
 
 ```bash
 API_URL="https://<id>.execute-api.<region>.amazonaws.com" npm run smoke:deploy
+```
+
+Monitoreo continuo (corre en bucle hasta Ctrl+C; registra cada check con datos de respuesta en `logs/e2e-<fecha>.log`, ver `DEPLOY.md` §6):
+
+```bash
+API_URL="https://<id>.execute-api.<region>.amazonaws.com" npm run e2e:continuous
 ```
 
 > Requiere credenciales AWS configuradas (`aws configure` / SSO) y `NOTIFY_URL` en el entorno para el Worker. Los stacks se nombran explícitamente `reto-geest-<STACK_ENV>-<tipo>` (default `STACK_ENV=dev`) para que convivan sin colisionar con otros stacks en la misma cuenta AWS. Si otra infraestructura ocupa `10.0.0.0/16`, despliega con un CIDR disjunto (`VPC_CIDR=10.20.0.0/16`). Diseño orientado a *free tier*: VPC de **2 AZs** (subnets gratis, requerido por RDS), instancia RDS **single-AZ** (`db.t3.micro`), y **NAT instance EC2** (`t3.micro`) en vez de NAT gateway para reducir el costo de egress.

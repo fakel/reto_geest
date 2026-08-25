@@ -399,9 +399,11 @@ packages/api/tests/notifications.test.ts
 
 ---
 
-## T-11: Error Handler Plugin
+## T-11: Error Handler Plugin ✅ COMPLETED
 
 **Objective:** Centralize error formatting across all routes with the standard `{ error: { code, message } }` structure.
+
+**Run tests:** `npm run test` → 73 passing (incl. 5 in `error-handler.test.ts`). `tsc --noEmit` and `eslint` clean. Refactored `buildTestApp` in `tests/helpers.ts` to use the centralized plugin.
 
 **Files to create/modify:**
 
@@ -417,10 +419,10 @@ packages/api/src/schemas/error.schema.ts
 - Log unexpected errors via `request.log.error()`
 
 **Acceptance Criteria:**
-- [ ] All existing routes produce standardized error format
-- [ ] Validation errors show `{ error: { code: "VALIDATION_ERROR", message: "..." } }`
-- [ ] AppErrors show correct statusCode and code
-- [ ] Unhandled errors → 500 INTERNAL_ERROR
+- [x] All existing routes produce standardized error format
+- [x] Validation errors show `{ error: { code: "VALIDATION_ERROR", message: "..." } }`
+- [x] AppErrors show correct statusCode and code
+- [x] Unhandled errors → 500 INTERNAL_ERROR
 
 **Commit message:** `feat(api): add centralized error handler plugin with standard error format`
 

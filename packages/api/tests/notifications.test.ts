@@ -6,8 +6,8 @@ import { prisma } from './setup';
 describe('US-09: GET /tasks/:idTask/notifications', () => {
   let app: FastifyInstance;
 
-  beforeEach(() => {
-    app = buildTestApp();
+  beforeEach(async () => {
+    app = await buildTestApp();
   });
 
   afterEach(async () => {

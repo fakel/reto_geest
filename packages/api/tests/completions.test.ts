@@ -14,8 +14,8 @@ const NO_ID = '00000000-0000-4000-8000-000000000000';
 describe('US-04: POST /tasks/:idTask/complete', () => {
   let app: FastifyInstance;
 
-  beforeEach(() => {
-    app = buildTestApp();
+  beforeEach(async () => {
+    app = await buildTestApp();
   });
 
   afterEach(async () => {

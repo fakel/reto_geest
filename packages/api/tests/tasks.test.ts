@@ -11,8 +11,8 @@ import { prisma } from './setup';
 describe('US-02: POST /tasks', () => {
   let app: FastifyInstance;
 
-  beforeEach(() => {
-    app = buildTestApp();
+  beforeEach(async () => {
+    app = await buildTestApp();
   });
 
   afterEach(async () => {
@@ -74,8 +74,8 @@ describe('US-02: POST /tasks', () => {
 describe('US-05: GET /tasks', () => {
   let app: FastifyInstance;
 
-  beforeEach(() => {
-    app = buildTestApp();
+  beforeEach(async () => {
+    app = await buildTestApp();
   });
 
   afterEach(async () => {
@@ -143,8 +143,8 @@ describe('US-05: GET /tasks', () => {
 describe('US-08: GET /tasks/:idTask', () => {
   let app: FastifyInstance;
 
-  beforeEach(() => {
-    app = buildTestApp();
+  beforeEach(async () => {
+    app = await buildTestApp();
   });
 
   afterEach(async () => {

@@ -10,6 +10,7 @@ import { notificationRoutes } from '../src/routes/notifications';
 import { adminRoutes } from '../src/routes/admin';
 import { installErrorHandler } from '../src/plugins/error-handler';
 import idempotencyPlugin from '../src/plugins/idempotency';
+import rateLimitPlugin, { type RateLimitPluginOptions } from '../src/plugins/rate-limit';
 import type { SqsSender } from '../src/services/complete.service';
 
 /**
@@ -87,17 +88,23 @@ export function createTestAssignment(
 
 /**
  * Build a Fastify app with the user routes registered and the standard error
- * handler (design §7) wired in. Used for E2E API tests. More routes are added
- * as later tasks land; T-14 replaces this with the real app factory.
+ * handler (design §7) wired in. Used for E2E API tests.
+ *
+ * Optional `rateLimit` overrides let tests exercise the limiter with a small
+ * max without touching env vars. T-14 replaces this with the real app factory.
  */
-export function buildTestApp(): FastifyInstance {
+export async function buildTestApp(
+  rateLimit?: RateLimitPluginOptions,
+): Promise<FastifyInstance> {
   const app = Fastify({ logger: false });
 
   installErrorHandler(app);
 
-  // Idempotency hooks all POST routes (registered before routes so its hooks
-  // apply app-wide). Register() is queued and resolved when the app readies.
-  app.register(idempotencyPlugin);
+  // Rate limiting first (protects all routes), then idempotency hooks. The
+  // rate-limit plugin (and idempotency) must be awaited so their hooks are
+  // attached at the root before routes are encapsulated.
+  await app.register(rateLimitPlugin, rateLimit);
+  await app.register(idempotencyPlugin);
 
   app.get('/health', async () => ({ status: 'ok' }));
 

@@ -36,7 +36,7 @@ describe('T-04: Prisma client singleton + pg-mem smoke test', () => {
   });
 
   it('buildTestApp returns a Fastify instance that responds to requests', async () => {
-    const app = buildTestApp();
+    const app = await buildTestApp();
     await app.ready();
     const res = await app.inject({ method: 'GET', url: '/health' });
     expect(res.statusCode).toBe(200);

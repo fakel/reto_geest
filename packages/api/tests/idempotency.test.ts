@@ -24,8 +24,8 @@ function postUser(
 describe('US-12: idempotency plugin', () => {
   let app: FastifyInstance;
 
-  beforeEach(() => {
-    app = buildTestApp();
+  beforeEach(async () => {
+    app = await buildTestApp();
   });
 
   afterEach(async () => {

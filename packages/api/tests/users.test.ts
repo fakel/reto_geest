@@ -9,8 +9,8 @@ const UUID_RE =
 describe('US-01: POST /users', () => {
   let app: FastifyInstance;
 
-  beforeEach(() => {
-    app = buildTestApp();
+  beforeEach(async () => {
+    app = await buildTestApp();
   });
 
   afterEach(async () => {
@@ -94,8 +94,8 @@ describe('US-01: POST /users', () => {
 describe('US-06: GET /users', () => {
   let app: FastifyInstance;
 
-  beforeEach(() => {
-    app = buildTestApp();
+  beforeEach(async () => {
+    app = await buildTestApp();
   });
 
   afterEach(async () => {
@@ -138,8 +138,8 @@ describe('US-06: GET /users', () => {
 describe('US-07: GET /users/:idUser/tasks', () => {
   let app: FastifyInstance;
 
-  beforeEach(() => {
-    app = buildTestApp();
+  beforeEach(async () => {
+    app = await buildTestApp();
   });
 
   afterEach(async () => {

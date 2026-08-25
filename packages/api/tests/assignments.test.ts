@@ -11,8 +11,8 @@ import { prisma } from './setup';
 describe('US-03: POST /tasks/:idTask/assign', () => {
   let app: FastifyInstance;
 
-  beforeEach(() => {
-    app = buildTestApp();
+  beforeEach(async () => {
+    app = await buildTestApp();
   });
 
   afterEach(async () => {

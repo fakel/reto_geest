@@ -119,3 +119,4 @@ Se ha decidido usar Fastify sobre Express por gusto y diversidad.
 - T-03: DeepSeek V4 Flash/$0.06 [commit 8b4e930]
 - T-04: DeepSeek V4 Flash/$0.06 [commit b7e3bb6]
 - T-05: DeepSeek V4 Flash/$0.04 [commit e040dd3]
+- T-06: DeepSeek V4 Flash/$0.04 [commit f2cac68]

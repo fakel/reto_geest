@@ -209,9 +209,11 @@ packages/api/tests/users.test.ts
 
 ---
 
-## T-06: Task Service & Routes (US-02, US-05, US-08)
+## T-06: Task Service & Routes (US-02, US-05, US-08) ✅ COMPLETED
 
 **Objective:** Implement task CRUD, list with status filter, and detail endpoint.
+
+**Run tests:** `npm run test` → 41 passing (incl. 11 in `tasks.test.ts`). `tsc --noEmit` and `eslint` clean.
 
 **Files to create/modify:**
 
@@ -237,14 +239,14 @@ packages/api/tests/tasks.test.ts
 - Response schemas
 
 **Tests (`tests/tasks.test.ts`):**
-- [ ] POST /tasks → 201 with title (and optional description)
-- [ ] POST /tasks → 400 when title empty or missing
-- [ ] GET /tasks → 200 returns all tasks with assignments
-- [ ] GET /tasks?status=open → 200 returns only open tasks
-- [ ] GET /tasks?status=archived → 200 returns only archived tasks
-- [ ] GET /tasks?status=invalid → 400 INVALID_STATUS_FILTER
-- [ ] GET /tasks/:idTask → 200 with task + assignments + user data
-- [ ] GET /tasks/:idTask → 404 when not found
+- [x] POST /tasks → 201 with title (and optional description)
+- [x] POST /tasks → 400 when title empty or missing
+- [x] GET /tasks → 200 returns all tasks with assignments
+- [x] GET /tasks?status=open → 200 returns only open tasks
+- [x] GET /tasks?status=archived → 200 returns only archived tasks
+- [x] GET /tasks?status=invalid → 400 INVALID_STATUS_FILTER
+- [x] GET /tasks/:idTask → 200 with task + assignments + user data
+- [x] GET /tasks/:idTask → 404 when not found
 
 **Commit message:** `feat(api): add task service, schemas, and routes for CRUD + status filtering`
 

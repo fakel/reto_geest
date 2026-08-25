@@ -1,17 +1,9 @@
 import { randomUUID } from 'node:crypto';
-import Fastify, { FastifyInstance } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import { PrismaClient, User, Task, TaskAssignment } from '@prisma/client';
 import { prisma as setupPrisma } from './setup';
-import { userRoutes } from '../src/routes/users';
-import { taskRoutes } from '../src/routes/tasks';
-import { assignmentRoutes } from '../src/routes/assignments';
-import { completionRoutes } from '../src/routes/completions';
-import { notificationRoutes } from '../src/routes/notifications';
-import { adminRoutes } from '../src/routes/admin';
-import { installErrorHandler } from '../src/plugins/error-handler';
-import idempotencyPlugin from '../src/plugins/idempotency';
-import rateLimitPlugin, { type RateLimitPluginOptions } from '../src/plugins/rate-limit';
-import type { SqsSender } from '../src/services/complete.service';
+import { buildApp } from '../src/app';
+import type { RateLimitPluginOptions } from '../src/plugins/rate-limit';
 
 /**
  * Reusable factories and app builder (design §6.1 / §6.2).
@@ -87,39 +79,21 @@ export function createTestAssignment(
 }
 
 /**
- * Build a Fastify app with the user routes registered and the standard error
- * handler (design §7) wired in. Used for E2E API tests.
+ * Build a Fastify app for E2E API tests by delegating to the real app factory
+ * (`src/app.ts`). A small mock SQS sender plus a `logger: false` keeps tests
+ * hermetic: requests hit pg-mem and never touch real AWS or loud logs.
  *
  * Optional `rateLimit` overrides let tests exercise the limiter with a small
- * max without touching env vars. T-14 replaces this with the real app factory.
+ * max without touching env vars.
  */
 export async function buildTestApp(
   rateLimit?: RateLimitPluginOptions,
 ): Promise<FastifyInstance> {
-  const app = Fastify({ logger: false });
-
-  installErrorHandler(app);
-
-  // Rate limiting first (protects all routes), then idempotency hooks. The
-  // rate-limit plugin (and idempotency) must be awaited so their hooks are
-  // attached at the root before routes are encapsulated.
-  await app.register(rateLimitPlugin, rateLimit);
-  await app.register(idempotencyPlugin);
-
-  app.get('/health', async () => ({ status: 'ok' }));
-
-  // Mock SQS sender decorated on the instance (mirrors the T-09 plugin). Tests
-  // may override `app.sqs.sendMessage` to spy on calls.
-  const mockSqs: SqsSender = {
-    sendMessage: async () => ({ MessageId: 'default-mock' }),
-  };
-  app.decorate('sqs', mockSqs);
-
-  app.register(userRoutes, { prefix: '/users' });
-  app.register(taskRoutes, { prefix: '/tasks' });
-  app.register(assignmentRoutes, { prefix: '/tasks' });
-  app.register(completionRoutes, { prefix: '/tasks' });
-  app.register(notificationRoutes, { prefix: '/tasks' });
-  app.register(adminRoutes, { prefix: '/admin' });
-  return app;
+  return buildApp({
+    logger: false,
+    rateLimit,
+    sqs: {
+      sendMessage: async () => ({ MessageId: 'default-mock' }),
+    },
+  });
 }

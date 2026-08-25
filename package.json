@@ -15,14 +15,15 @@
     "test:watch": "vitest",
     "lint": "eslint packages/",
     "typecheck": "tsc -p packages/api/tsconfig.json --noEmit && tsc -p packages/worker/tsconfig.json --noEmit && tsc -p infra/tsconfig.json --noEmit",
-    "db:generate": "prisma generate --schema=packages/api/prisma/schema.prisma",
-    "db:migrate": "prisma migrate dev --schema=packages/api/prisma/schema.prisma",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
     "prepare": "husky"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.5.0",
     "@commitlint/config-conventional": "^19.5.0",
     "@eslint/js": "^9.13.0",
+    "dotenv": "^16.4.5",
     "eslint": "^9.13.0",
     "husky": "^9.1.6",
     "lint-staged": "^15.2.10",

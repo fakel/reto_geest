@@ -94,8 +94,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "postgresql"     // Prisma ORM v7: no `url` here — connection handled by driver adapter
 }
 
 model User {
@@ -461,13 +460,25 @@ Uses `onRequest` to look up cached responses and `onSend` to store them:
 
 ### 6.2 Test Setup (`tests/setup.ts`)
 
+> **Prisma ORM v7 (driver adapter):** Prisma Client v7 requires a driver adapter when connecting (no `url` in the datasource). In tests, we instantiate `PrismaClient` with `@prisma/adapter-pg` pointed at a `pg-mem` pool (via `db.adapters.createPg()`), so no real PostgreSQL/Docker is needed. See `packages/api/src/config/database.ts` (T-04).
+
 ```typescript
 import { newDb } from 'pg-mem';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from '@prisma/client';
 import { beforeEach, afterEach } from 'vitest';
 
-// 1. Create pg-mem instance
-// 2. Patch Prisma to use pg-mem adapter
-// 3. Run migrations on pg-mem
+// 1. Create pg-mem instance + pg-compatible adapter
+const db = newDb();
+const { Pool } = db.adapters.createPg();
+const adapter = new PrismaPg(new Pool());
+
+// 2. Instantiate PrismaClient with the adapter
+const prisma = new PrismaClient({ adapter });
+
+// 3. Push the schema into pg-mem
+await prisma.$executeRawUnsafe(/* schema DDL */);
+
 // 4. Reset DB between tests
 ```
 

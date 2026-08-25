@@ -4,7 +4,7 @@ API REST para la gestión y asignación de tareas con archivado automático y no
 
 ## Stack Técnico
 - **NodeJS + FastifyJS**
-- **TypeScript + Prisma ORM**
+- **TypeScript + Prisma ORM** (v7 — driver adapter `@prisma/adapter-pg`)
 - **Testing:** Vitest, Supertest, pg-mem, prisma-mock.
 - **Infraestructura:** AWS CDK (Lambda, SQS, RDS PostgreSQL).
 
@@ -12,6 +12,7 @@ API REST para la gestión y asignación de tareas con archivado automático y no
 - **IDs por UUIDv7:** A diferencia de los ejemplos numéricos de la especificación original, usamos UUIDv7 para mayor resiliencia en un entorno escalable.
 - **OCC vs Locks:** Elegimos Optimistic Concurrency Control para manejar las colisiones al archivar tareas en lugar de locks pesimistas, minimizando los cuellos de botella en RDS.
 - **Entorno Local y E2E:** Reemplazamos PostgreSQL real por `pg-mem` y `prisma-mock` en la suite de pruebas para evitar el overhead de Docker/LocalStack durante el CI, manteniendo una ejecución instantánea.
+- **Prisma ORM v7 (driver adapter):** La URL de conexión se mueve del `datasource` del schema a `prisma.config.ts` (para Migrate). El `PrismaClient` recibe un driver adapter (`@prisma/adapter-pg`) en el constructor; en tests se apunta el adapter a un pool de `pg-mem`.
 - **Serverless API:** Desplegada en AWS Lambda en vez de contenedores activos 24/7.
 
 ## Instrucciones de Ejecución
@@ -22,23 +23,44 @@ Requisitos: **Node.js >= 20** (recomendado 24.x) y **npm >= 10**.
 # 1. Instalar dependencias de todos los workspaces
 npm install
 
-# 2. Ejecutar la suite de pruebas (Vitest, sin necesidad de Docker/PostgreSQL)
+# 2. Configurar variables de entorno (copiar template y ajustar)
+cp .env.example .env
+
+# 3. Generar el cliente Prisma (lee prisma.config.ts y .env)
+npm run db:generate
+
+# 4. Ejecutar la suite de pruebas (Vitest, sin necesidad de Docker/PostgreSQL)
 npm run test
 
-# 3. Lint de TypeScript (ESLint 9 + typescript-eslint)
+# 5. Lint de TypeScript (ESLint 9 + typescript-eslint)
 npm run lint
 
-# 4. Verificación de tipos en todos los paquetes
+# 6. Verificación de tipos en todos los paquetes
 npm run typecheck
 
-# 5. Build de api y worker
+# 7. Build de api y worker
 npm run build
 
-# 6. Servidor de desarrollo local (api)
+# 8. Servidor de desarrollo local (api)
 npm run dev
 ```
 
 > Nota: `npm run test` usa `--passWithNoTests` para que el pipeline CI salga limpio hasta que existan suites de pruebas (a partir de T-04).
+
+### Variables de Entorno
+
+Copy `.env.example` → `.env` (ver `$ cp .env.example .env`). Variables requeridas:
+
+| Variable | Requerida | Default | Uso |
+|----------|-----------|---------|-----|
+| `DATABASE_URL` | Sí | — | Conexión PostgreSQL (Migrate + Client) |
+| `NOTIFICATION_QUEUE_URL` | Sí | — | SQS (sendMessage) de la API |
+| `DLQ_URL` | Sí | — | SQS (polling DLQ) de la API |
+| `NOTIFY_URL` | Sí | — | Webhook objetivo del Worker |
+| `IDEMPOTENCY_TTL_SECONDS` | No | `86400` | TTL de idempotencia |
+| `RATE_LIMIT_MAX` | No | `100` | Rate limit |
+| `RATE_LIMIT_WINDOW_MS` | No | `60000` | Ventana de rate limit |
+| `NODE_ENV` | No | `development` | Logging / testing |
 
 ## Estructura del Monorepo
 
@@ -91,4 +113,5 @@ Se ha decidido usar Fastify sobre Express por gusto y diversidad.
 
 ## Costos de desarrollo IA
 
-- Definición de SDD: DeepSeek V4 Pro/$0.15
+- Definición de SDD: DeepSeek V4 Pro/$0.15 [commit 7d00d1a]
+- T-01: DeepSeek V4 Flash/$0.06 [commit aa14d64]

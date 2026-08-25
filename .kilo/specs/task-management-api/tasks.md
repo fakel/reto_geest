@@ -57,7 +57,7 @@ infra/cdk.json
 
 ---
 
-## T-02: Prisma Schema & Database Migrations
+## T-02: Prisma Schema & Database Migrations ✅ COMPLETED
 
 **Objective:** Define the complete Prisma schema per design §2 and generate the Prisma client.
 
@@ -65,17 +65,22 @@ infra/cdk.json
 
 ```
 packages/api/prisma/schema.prisma
+prisma.config.ts             (Prisma ORM v7: datasource URL for Migrate — no url in schema)
+.env / .env.example          (DATABASE_URL and other env vars)
 ```
 
 **Models to define:** `User`, `Task`, `TaskAssignment`, `IdempotencyKey`, `NotificationAttempt`
 
+> **Prisma ORM v7:** The schema datasource no longer carries `url`. Connection URLs for Migrate live in `prisma.config.ts`; the `PrismaClient` receives a driver adapter (`@prisma/adapter-pg`) in the constructor (wired in T-04).
+
 **Acceptance Criteria:**
-- [ ] `npx prisma generate --schema=packages/api/prisma/schema.prisma` succeeds
-- [ ] Schema matches design §2 exactly (all models, fields, relations, indexes, mappings)
-- [ ] `@@unique([userId, taskId])` on TaskAssignment
-- [ ] `@unique` on IdempotencyKey.keyHash
-- [ ] `@@index([keyHash, method, path])` and `@@index([expiresAt])` on IdempotencyKey
-- [ ] All `@map()` and `@@map()` annotations present
+- [x] `npx prisma generate --schema=packages/api/prisma/schema.prisma` succeeds
+- [x] Schema matches design §2 exactly (all models, fields, relations, indexes, mappings)
+- [x] `@@unique([userId, taskId])` on TaskAssignment
+- [x] `@unique` on IdempotencyKey.keyHash
+- [x] `@@index([keyHash, method, path])` and `@@index([expiresAt])` on IdempotencyKey
+- [x] All `@map()` and `@@map()` annotations present
+- [x] `prisma generate` / `prisma validate` succeed via `prisma.config.ts` (Prisma ORM v7, driver adapter approach)
 
 **Commit message:** `feat(db): add Prisma schema with User, Task, TaskAssignment, IdempotencyKey, and NotificationAttempt models`
 

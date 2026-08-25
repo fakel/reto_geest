@@ -10,10 +10,13 @@
   },
   "dependencies": {
     "@aws-sdk/client-sqs": "^3.658.0",
-    "@prisma/client": "^5.20.0"
+    "@prisma/adapter-pg": "^7.9.1",
+    "@prisma/client": "^7.9.1",
+    "pg": "^8.23.0"
   },
   "devDependencies": {
     "@types/node": "^22.7.5",
+    "@types/pg": "^8.11.0",
     "pg-mem": "^3.0.1",
     "vitest": "^2.1.4"
   }

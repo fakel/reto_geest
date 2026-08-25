@@ -1,0 +1,89 @@
+// RETO GEEST - Task Management API
+// Prisma schema for PostgreSQL (design §2)
+//
+// Design decisions:
+// - Task.status is String (not Enum) for pg-mem compatibility and simpler migrations.
+// - Task.version (Int) for Optimistic Concurrency Control on archive.
+// - @@unique([userId, taskId]) enforces no-duplicate assignments at DB level.
+// - IdempotencyKey.keyHash is unique; indexed by (keyHash, method, path) and expiresAt.
+// - NotificationAttempt linked to Task via FK for efficient per-task queries.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(uuid())     // UUIDv7 generated at app layer
+  name      String
+  lastName  String   @map("last_name")
+  email     String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  taskAssignments TaskAssignment[]
+
+  @@map("users")
+}
+
+model Task {
+  id          String   @id @default(uuid())   // UUIDv7 generated at app layer
+  title       String
+  description String?                          // optional
+  status      String   @default("open")        // "open" | "archived"
+  version     Int      @default(0)             // Optimistic Concurrency Control
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  taskAssignments       TaskAssignment[]
+  notificationAttempts  NotificationAttempt[]
+
+  @@map("tasks")
+}
+
+model TaskAssignment {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  taskId    String   @map("task_id")
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, taskId])       // prevents duplicate assignments
+  @@map("task_assignments")
+}
+
+model IdempotencyKey {
+  id             String   @id
+  keyHash        String   @unique @map("key_hash")     // SHA-256 of Idempotency-Key header
+  method         String                                 // HTTP method
+  path           String                                 // Request path
+  responseStatus Int      @map("response_status")       // Cached HTTP status code
+  responseBody   String   @map("response_body")         // Cached JSON response
+  createdAt      DateTime @default(now()) @map("created_at")
+  expiresAt      DateTime @map("expires_at")            // TTL-based expiration
+
+  @@index([keyHash, method, path])
+  @@index([expiresAt])
+  @@map("idempotency_keys")
+}
+
+model NotificationAttempt {
+  id            String   @id @default(uuid())
+  taskId        String   @map("task_id")
+  status        String                             // "pending" | "success" | "failed"
+  statusCode    Int?     @map("status_code")       // HTTP status from webhook response
+  responseBody  String?  @map("response_body")     // Truncated response
+  attemptNumber Int      @map("attempt_number")    // 1, 2, or 3
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("notification_attempts")
+}

@@ -1,0 +1,23 @@
+{
+  "name": "@reto-geest/infra",
+  "version": "0.1.0",
+  "private": true,
+  "description": "RETO GEEST - AWS CDK infrastructure (VPC, RDS, SQS/DLQ, API Lambda, Worker Lambda)",
+  "scripts": {
+    "cdk": "cdk",
+    "synth": "cdk synth",
+    "deploy": "cdk deploy",
+    "diff": "cdk diff",
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.160.0",
+    "constructs": "^10.4.0",
+    "esbuild": "^0.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.5",
+    "aws-cdk": "^2.160.0",
+    "typescript": "^5.6.3"
+  }
+}

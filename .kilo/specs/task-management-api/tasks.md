@@ -9,7 +9,7 @@
 
 ---
 
-## T-01: Project Scaffolding & Tooling
+## T-01: Project Scaffolding & Tooling ✅ COMPLETED
 
 **Objective:** Initialize the monorepo with npm workspaces, TypeScript, husky, commitlint, vitest, and directory structure.
 
@@ -47,11 +47,11 @@ infra/cdk.json
 - Dev: `@types/node`, `typescript`
 
 **Acceptance Criteria:**
-- [ ] `npm install` succeeds at root and all workspaces
-- [ ] `npm run test` runs vitest (no tests yet, exits clean)
-- [ ] `npm run lint` runs eslint (no files yet)
-- [ ] husky hooks are installed (`.husky/` directory present)
-- [ ] Directory structure matches design §1
+- [x] `npm install` succeeds at root and all workspaces
+- [x] `npm run test` runs vitest (no tests yet, exits clean)
+- [x] `npm run lint` runs eslint (no files yet)
+- [x] husky hooks are installed (`.husky/` directory present)
+- [x] Directory structure matches design §1
 
 **Commit message:** `chore: scaffold monorepo with npm workspaces, TypeScript, husky, and vitest`
 

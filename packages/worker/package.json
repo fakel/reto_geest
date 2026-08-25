@@ -1,0 +1,20 @@
+{
+  "name": "@reto-geest/worker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "RETO GEEST - SQS consumer Lambda that delivers webhook notifications",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@aws-sdk/client-sqs": "^3.658.0",
+    "@prisma/client": "^5.20.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.5",
+    "pg-mem": "^3.0.1",
+    "vitest": "^2.1.4"
+  }
+}

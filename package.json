@@ -1,0 +1,42 @@
+{
+  "name": "reto-geest",
+  "version": "0.1.0",
+  "private": true,
+  "description": "RETO GEEST - Task Management API monorepo (Fastify API, SQS Worker, AWS CDK)",
+  "workspaces": [
+    "packages/api",
+    "packages/worker",
+    "infra"
+  ],
+  "scripts": {
+    "dev": "tsx watch packages/api/src/index.ts",
+    "build": "tsc -p packages/api/tsconfig.json && tsc -p packages/worker/tsconfig.json",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest",
+    "lint": "eslint packages/",
+    "typecheck": "tsc -p packages/api/tsconfig.json --noEmit && tsc -p packages/worker/tsconfig.json --noEmit && tsc -p infra/tsconfig.json --noEmit",
+    "db:generate": "prisma generate --schema=packages/api/prisma/schema.prisma",
+    "db:migrate": "prisma migrate dev --schema=packages/api/prisma/schema.prisma",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.5.0",
+    "@commitlint/config-conventional": "^19.5.0",
+    "@eslint/js": "^9.13.0",
+    "eslint": "^9.13.0",
+    "husky": "^9.1.6",
+    "lint-staged": "^15.2.10",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.11.0",
+    "vitest": "^2.1.4"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix"
+    ]
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

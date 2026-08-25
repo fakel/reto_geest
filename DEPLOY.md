@@ -1,0 +1,275 @@
+# Guía de Despliegue (Deployment)
+
+Esta guía describe, paso a paso, cómo desplegar la solución completa **RETO GEEST** en AWS con AWS CDK, tanto de forma local (CLI) como mediante el pipeline automático de GitHub Actions.
+
+---
+
+## 1. Arquitectura desplegada
+
+El despliegue crea **4 stacks CDK** en orden:
+
+| Stack | Crea |
+|-------|------|
+| `NetworkStack` | VPC single-AZ (1 subnet privada + 1 pública), 1 NAT gateway, SG compartido de Lambdas |
+| `DatabaseStack` | RDS PostgreSQL 16 (`db.t3.micro`, free-tier), secret en Secrets Manager, `DATABASE_URL` |
+| `QueueStack` | SQS principal + DLQ (redrive 3), Worker Lambda (NodeJS 24.x) con event source SQS |
+| `ApiStack` | API Lambda (NodeJS 24.x) + API Gateway HTTP API (`$default`), env de colas y rate-limit |
+
+```
+NetworkStack ──► DatabaseStack ──► QueueStack ──► ApiStack
+     │                │                │              │
+     └── VPC/SG  ◄────┘  DATABASE_URL ◄┘  queue/DLQ ◄─┘
+```
+
+> Requiere cuenta AWS + región. Se asume `us-east-1`; cambia `AWS_REGION` donde corresponda.
+
+---
+
+## 2. Prerrequisitos
+
+### 2.1 Local
+- **Node.js >= 24** y **npm >= 10**.
+- **AWS CLI v2** configurado (`aws configure` o SSO) con permisos de administrador para la cuenta/región objetivo.
+- **AWS CDK** (el proyecto lo trae en `infra/devDependencies`).
+
+### 2.2 Repositorio en GitHub
+- Repo subido y con `main` como rama principal (el pipeline se dispara en `main`).
+
+---
+
+## 3. Variables de entorno
+
+### 3.1 Local (`.env`)
+Copia `.env.example` → `.env` y ajusta los valores (ver sección de variables en el README). Para el despliegue CDK solo son necesarias en tiempo de *build*:
+
+| Variable | Uso | ¿Necesaria en synth? |
+|----------|-----|----------------------|
+| `DATABASE_URL` | `prisma generate` / config de Prisma | Sí (placeholder vale) |
+| `NOTIFY_URL` | Worker → webhook objetivo | **Sí** (para el `QueueStack`) |
+| `AWS_REGION` | Región de despliegue | Sí |
+
+> `DATABASE_URL` final de las Lambdas se construye en **tiempo de deploy** a partir del secret de RDS (ver `database-stack.ts`), no se necesita el valor real localmente.
+
+### 3.2 Secretos de GitHub
+Para el pipeline automático (OIDC):
+
+| Secret | Descripción |
+|--------|-------------|
+| `AWS_ROLE_ARN` | ARN del rol IAM federado (OIDC) con permisos de despliegue |
+| `AWS_ACCOUNT_ID` | ID de tu cuenta AWS (ej. `123456789012`) |
+| `NOTIFY_URL` | URL del webhook destino para el Worker |
+| (opcional) `AWS_REGION` | Sobrescribe la región si no es `us-east-1` |
+
+---
+
+## 4. Opción A — Despliegue local con CDK CLI
+
+### Paso 1 — Instalar dependencias
+```bash
+npm install
+```
+
+### Paso 2 — Generar el cliente Prisma
+```bash
+export DATABASE_URL='postgresql://dummy:dummy@localhost:5432/dummy'  # solo para el generate
+npm run db:generate
+```
+
+### Paso 3 — Configurar credenciales AWS
+```bash
+aws configure          # o: aws sso login
+export AWS_REGION=us-east-1
+export NOTIFY_URL='https://tu-webhook.example.com/hook'
+```
+
+### Paso 4 — Bootstrap de CDK (solo la primera vez / por cuenta+región)
+```bash
+cd infra
+npx cdk bootstrap aws://$(aws sts get-caller-identity --query Account --output text)/$AWS_REGION
+```
+
+### Paso 5 — Revisar el plan (diferencias)
+```bash
+npx cdk diff
+```
+
+### Paso 6 — Desplegar todos los stacks
+```bash
+npx cdk deploy --all --require-approval never
+```
+> El despliegue puede tardar varios minutos (RDS aprovisionándose). Puedes vigilar el progreso en la consola de CloudFormation.
+
+### Paso 7 — Verificar (ver sección 6)
+
+---
+
+## 5. Opción B — Pipeline automático de GitHub Actions
+
+El workflow `.github/workflows/deploy.yml` ejecuta:
+
+```
+push a main / manual ──► CI (lint + typecheck + test) ──► CD (synth + deploy)
+                                                              │
+                                              environment: production
+                                                              │
+                                                  OIDC → asume AWS_ROLE_ARN
+```
+
+1. **CI** corre en cada push a `main` y en cada PR (no despliega en PRs).
+2. **CD** solo corre en `push` a `main` o `workflow_dispatch`, y solo si CI pasa.
+
+### 5.1 Configurar federación OIDC (recomendado, sin keys de larga duración)
+
+**a) Crear el Identity Provider en IAM:**
+
+1. Consola AWS → IAM → **Identity providers** → **Add provider**.
+   - Provider type: **OpenID Connect**
+   - Provider URL: `https://token.actions.githubusercontent.com`
+   - Audiencia (audience): `sts.amazonaws.com`
+
+**b) Crear el rol de despliegue** (o editar uno existente) con la policy de confianza:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+        },
+        "StringLike": {
+          "token.actions.githubusercontent.com:sub": "repo:TU_USUARIO/TU_REPO:ref:refs/heads/main"
+        }
+      }
+    }
+  ]
+}
+```
+> Sustituye `ACCOUNT_ID`, `TU_USUARIO`, `TU_REPO`. El `sub` restringe el rol al branch `main` (ajusta si usas `workflow_dispatch` desde otro branch).
+
+**c) Adjuntar la policy de permisos al rol** (mínima suficiente para CDK):
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "cloudformation:*",
+        "s3:*",
+        "ecr:*",
+        "ec2:*",
+        "rds:*",
+        "sqs:*",
+        "lambda:*",
+        "apigateway:*",
+        "secretsmanager:*",
+        "iam:PassRole",
+        "iam:CreateRole",
+        "iam:AttachRolePolicy",
+        "iam:GetRole",
+        "iam:PutRolePolicy",
+        "ssm:*",
+        "logs:*"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
+**d) Configurar el environment `production`:**
+Repo → Settings → **Environments** → **New environment** → `production`. Opcionalmente activa **Required reviewers** para exigir aprobación antes de desplegar.
+
+**e) Añadir los secrets** (Settings → Secrets and variables → Actions):
+`AWS_ROLE_ARN`, `AWS_ACCOUNT_ID`, `NOTIFY_URL`.
+
+### 5.2 Desplegar
+- **Automático:** al hacer `push` a `main` (si los archivos de `packages/`, `infra/`, etc. cambiaron).
+- **Manual:** repo → **Actions** → “Deploy to AWS” → **Run workflow**.
+
+---
+
+## 6. Verificación post-despliegue
+
+1. Obtén la URL de la API:
+   ```bash
+   # desde infra/ (o consola → CloudFormation → ApiStack → Outputs → ApiUrl)
+   npx cdk deploy --all --require-approval never 2>&1 | grep ApiUrl
+   ```
+   O en consola: **CloudFormation → ApiStack → Outputs → `ApiUrl`**.
+
+2. Health check:
+   ```bash
+   curl -s <API_URL>/health
+   # {"status":"ok"}
+   ```
+
+3. Probar el flujo completo (crear usuario → task → asignar → completar):
+   ```bash
+   API=<API_URL>
+
+   # crear usuario
+   curl -s -X POST $API/users -H 'content-type: application/json' \
+        -d '{"name":"Ana","lastName":"Perez","email":"ana@example.com"}'
+   # crear task
+   curl -s -X POST $API/tasks -H 'content-type: application/json' -d '{"title":"Mi tarea"}'
+   # asignar usuario al task
+   curl -s -X POST $API/tasks/<TASK_ID>/assign \
+        -H 'content-type: application/json' -d '{"userIds":["<USER_ID>"]}'
+   # completar (último asignado archiva el task y encola la notificación)
+   curl -s -X POST $API/tasks/<TASK_ID>/complete \
+        -H 'content-type: application/json' -d '{"userId":"<USER_ID>"}'
+   # ver historial de notificaciones
+   curl -s $API/tasks/<TASK_ID>/notifications
+   # inspeccionar DLQ
+   curl -s $API/admin/dlq
+   ```
+
+4. Revisa los logs de Lambda (CloudWatch) para confirmar que el Worker entregó el webhook.
+
+---
+
+## 7. Variables de entorno finales de las Lambdas
+
+| Lambda | Variables inyectadas |
+|--------|----------------------|
+| **API** | `DATABASE_URL`, `NOTIFICATION_QUEUE_URL`, `DLQ_URL`, `RATE_LIMIT_MAX`, `RATE_LIMIT_WINDOW_MS`, `NODE_ENV=production` |
+| **Worker** | `DATABASE_URL`, `NOTIFY_URL`, `NODE_ENV=production` |
+
+> `DATABASE_URL` se resuelve en deploy desde el secret de RDS; `NOTIFICATION_QUEUE_URL`/`DLQ_URL` se importan del `QueueStack`.
+
+---
+
+## 8. Actualizaciones y rollback
+
+- **Actualizar:** haz `push` a `main` → el pipeline redeploya automáticamente (mismos stacks, `cdk deploy` solo aplica cambios).
+- **Rollback:** en consola **CloudFormation** vuelve a “Rollback” una versión anterior de una stack, o redeploya un commit anterior con `workflow_dispatch`.
+
+---
+
+## 9. Teardown (eliminar infraestructura)
+
+```bash
+cd infra
+NOTIFY_URL='https://example.com/webhook' npx cdk destroy --all --force
+```
+> Elimina todas las stacks y sus recursos (VPC, RDS, colas SQS, Lambdas, API Gateway). RDS se elimina porque usa `removalPolicy: DESTROY` (no apto para producción).
+
+---
+
+## 10. Costos
+
+Diseño orientado a *free tier / mínimo costo*:
+- **single-AZ** y **`db.t3.micro`** (eligible free tier) para RDS.
+- **1 NAT gateway** = único costo recurrente no cubierto por el tier gratuito (~$33/mes).
+- Lambdas sin costo en volúmenes bajos dentro del free tier.
+
+> Consulta `README.md` si quieres considerar la alternativa de VPC endpoints.

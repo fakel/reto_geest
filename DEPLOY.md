@@ -10,7 +10,7 @@ El despliegue crea **4 stacks CDK** en orden:
 
 | Stack | Crea |
 |-------|------|
-| `NetworkStack` | VPC single-AZ (1 subnet privada + 1 pública), 1 NAT gateway, SG compartido de Lambdas |
+| `NetworkStack` | VPC single-AZ (1 subnet privada + 1 pública), 1 **NAT instance** (`t3.micro`, AL2023) en vez de NAT gateway, SG compartido de Lambdas |
 | `DatabaseStack` | RDS PostgreSQL 16 (`db.t3.micro`, free-tier), secret en Secrets Manager, `DATABASE_URL` |
 | `QueueStack` | SQS principal + DLQ (redrive 3), Worker Lambda (NodeJS 24.x) con event source SQS |
 | `ApiStack` | API Lambda (NodeJS 24.x) + API Gateway HTTP API (`$default`), env de colas y rate-limit |
@@ -269,7 +269,7 @@ NOTIFY_URL='https://example.com/webhook' npx cdk destroy --all --force
 
 Diseño orientado a *free tier / mínimo costo*:
 - **single-AZ** y **`db.t3.micro`** (eligible free tier) para RDS.
-- **1 NAT gateway** = único costo recurrente no cubierto por el tier gratuito (~$33/mes).
+- **1 NAT instance EC2** (`t3.micro`, Amazon Linux 2023) reemplaza al NAT gateway para el egress de las Lambdas → en cuentas nuevas es **gratuita durante 12 meses** (750 h/mes de EC2 free tier); tras el periodo, ~$7/mes vs ~$33/mes del NAT gateway gestionado.
 - Lambdas sin costo en volúmenes bajos dentro del free tier.
 
-> Consulta `README.md` si quieres considerar la alternativa de VPC endpoints.
+> La NAT instance usa una IP pública auto-asignada (no un Elastic IP) para mantener el costo mínimo; si la reinicias pierdes la IP pública. Para producción considera adjuntar un EIP (sin cargo mientras está asociado a la instancia). Consulta también la alternativa de VPC endpoints en `README.md`.

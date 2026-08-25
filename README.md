@@ -107,7 +107,7 @@ RETO GEEST/
 │   ├── bin/
 │   │   └── app.ts              # Entrada CDK: Network → Database → Queue → API
 │   └── lib/
-│       ├── network-stack.ts    # VPC (single AZ) + NAT + SG compartido de Lambdas
+│       ├── network-stack.ts    # VPC (single AZ) + NAT instance t3.micro + SG Lambdas
 │       ├── database-stack.ts   # RDS PostgreSQL 16 (t3.micro free tier) + Secret
 │       ├── queue-stack.ts      # SQS principal + DLQ + Worker Lambda (event source)
 │       └── api-stack.ts        # API Lambda + HTTP API Gateway ($default)
@@ -152,7 +152,7 @@ En la carpeta `.kilo/specs/` podrá encontrar las especificaciones iniciales (re
 
 La infraestructura se define como código en `infra/` con **AWS CDK v2** y se compone de 4 stacks en orden: **Network → Database → Queue → API**.
 
-- **`NetworkStack`** — VPC single-AZ (una AZ, 1 subnet privada + 1 pública) con **1 NAT gateway** para egress de las Lambdas, y SG compartido de Lambdas.
+- **`NetworkStack`** — VPC single-AZ (una AZ, 1 subnet privada + 1 pública) con **1 NAT instance** (`t3.micro`, Amazon Linux 2023) para egress de las Lambdas, y SG compartido de Lambdas.
 - **`DatabaseStack`** — RDS PostgreSQL 16 (`db.t3.micro`, *free-tier*), single-AZ, no público; credenciales auto-generadas en **Secrets Manager**; expone `DATABASE_URL` resuelto en deploy.
 - **`QueueStack`** — SQS principal (`maxReceiveCount: 3`, visibility 30s) con **DLQ** (retención 14 días) + **Worker Lambda** (NodeJS 24.x) con event source SQS.
 - **`ApiStack`** — **API Lambda** (NodeJS 24.x, 512 MB, 29s) expuesta por **API Gateway HTTP API** (`$default` → proxy), con colas y rate-limit cableados.
@@ -165,7 +165,7 @@ npm run deploy   # cdk deploy --all — despliega los 4 stacks
 npm run diff     # cdk diff — cambios pendientes
 ```
 
-> Requiere credenciales AWS configuradas (`aws configure` / SSO) y `NOTIFY_URL` en el entorno para el Worker. Diseño orientado a *free tier* (single-AZ, `db.t3.micro`, 1 NAT), con la salvedad de que el NAT gateway de egress es el único costo recurrente no cubierto por el tier gratuito.
+> Requiere credenciales AWS configuradas (`aws configure` / SSO) y `NOTIFY_URL` en el entorno para el Worker. Diseño orientado a *free tier* (single-AZ, `db.t3.micro` en RDS y NAT instance), reemplazando el NAT **gateway** gestionado por una **NAT instance EC2** (`t3.micro`) para reducir el costo de egress.
 
 ## Nota
 

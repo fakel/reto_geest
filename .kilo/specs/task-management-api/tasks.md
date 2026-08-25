@@ -634,9 +634,11 @@ infra/lib/api-stack.ts
 
 **`network-stack.ts` spec:**
 - VPC with private + public subnets
-- NAT Gateway in public subnet
+- **NAT instance EC2 (`t3.micro`, AL2023) via `NatInstanceProviderV2` instead of a managed NAT gateway** (cost optimization)
 - Internet Gateway
-- **Single AZ (maxAzs: 1), single NAT gateway** for a free-tier-leaning, cost-minimal deploy
+- **Single AZ (maxAzs: 1)** for a free-tier-leaning, cost-minimal deploy
+
+> **Post-T-17 amendment:** The managed NAT gateway was replaced by a `t3.micro` NAT instance (`ec2.NatInstanceProviderV2`) to reduce egress cost. `sourceDestCheck: false`, auto-assigned public IP, AL2023 via SSM param.
 
 **`database-stack.ts` spec:**
 - RDS PostgreSQL instance (**db.t3.micro — free-tier eligible**, engine 16.x)

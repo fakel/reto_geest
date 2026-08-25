@@ -8,9 +8,11 @@ import { Construct } from 'constructs';
  * Creates the shared VPC plus a shared security group used by all application
  * Lambdas. Configured for a cost-efficient, free-tier-friendly deploy:
  *   - Single Availability Zone (single-AZ footprint).
- *   - A single NAT gateway (network egress for the Lambdas to reach SQS and
- *     the external webhook).
- * Private subnets (network egress via the NAT gateway) and one public subnet.
+ *   - A NAT *instance* on `t3.micro` (Amazon Linux, Prebuilt NAT AMI) instead
+ *     of a managed NAT gateway — cheaper per hour (~1/4 the cost) and
+ *     free-tier-eligible for new accounts. CDK configures routing + user-data
+ *     automatically via `NatInstanceProvider`.
+ * Private subnets (network egress via the NAT instance) and one public subnet.
  * The VPC and the Lambda security group are exposed so downstream stacks
  * (database, queue, api) can place their resources inside the same network and
  * open RDS ingress to the Lambdas.
@@ -24,11 +26,22 @@ export class NetworkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
+    // NAT instance provider (replaces the managed NAT gateway). An explicit
+    // Amazon Linux 2023 image is passed so CDK does not perform a special NAT
+    // AMI context lookup at synth time; the provider injects the NAT user-data.
+    const natProvider = new ec2.NatInstanceProviderV2({
+      instanceType: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MICRO),
+      machineImage: ec2.MachineImage.latestAmazonLinux2023(),
+      defaultAllowedTraffic: ec2.NatTrafficDirection.OUTBOUND_ONLY,
+    });
+
     this.vpc = new ec2.Vpc(this, 'Vpc', {
       // Single AZ to stay on the free tier and keep costs minimal.
       maxAzs: 1,
-      // One NAT gateway is the minimum needed for Lambda egress.
+      // One NAT instance provides egress for the private subnets.
       natGateways: 1,
+      // NAT instance (EC2) instead of a managed NAT gateway.
+      natGatewayProvider: natProvider,
       ipAddresses: ec2.IpAddresses.cidr('10.0.0.0/16'),
       subnetConfiguration: [
         {

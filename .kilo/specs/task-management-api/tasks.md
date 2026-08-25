@@ -574,9 +574,11 @@ packages/api/tests/admin.test.ts
 
 ---
 
-## T-16: Worker Lambda — SQS Consumer
+## T-16: Worker Lambda — SQS Consumer ✅ COMPLETED
 
 **Objective:** Implement the standalone Lambda that consumes SQS notifications, POSTs to the external webhook, and logs NotificationAttempt records.
+
+**Run tests:** `npm run test` → 97 passing (incl. 6 in `worker.test.ts`; suite now spans api + worker, driven by the updated `vitest.config.ts`). `tsc --noEmit` (api + worker) and `eslint` clean.
 
 **Files to create/modify:**
 
@@ -586,6 +588,8 @@ packages/worker/src/index.ts
 packages/worker/src/webhook.ts
 packages/worker/src/notification-log.ts
 packages/worker/tests/worker.test.ts
+packages/worker/tests/setup.ts          (added: pg-mem Prisma setup for worker)
+vitest.config.ts                        (modified: include worker tests)
 ```
 
 **`index.ts` spec:**
@@ -603,10 +607,10 @@ packages/worker/tests/worker.test.ts
 - `logAttempt(prisma, data: { taskId, status, statusCode?, responseBody?, attemptNumber })` → NotificationAttempt
 
 **Tests (`tests/worker.test.ts`):**
-- [ ] Webhook POST returns 200 → NotificationAttempt with status "success"
-- [ ] Webhook returns 500 → throws error (SQS will retry)
-- [ ] NotificationAttempt is created with correct attemptNumber from SQS attributes
-- [ ] Multiple records in batch are processed independently
+- [x] Webhook POST returns 200 → NotificationAttempt with status "success"
+- [x] Webhook returns 500 → throws error (SQS will retry)
+- [x] NotificationAttempt is created with correct attemptNumber from SQS attributes
+- [x] Multiple records in batch are processed independently
 
 **Commit message:** `feat(worker): add SQS consumer Lambda with webhook delivery and notification logging`
 

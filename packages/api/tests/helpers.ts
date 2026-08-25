@@ -5,6 +5,7 @@ import { prisma as setupPrisma } from './setup';
 import { AppError } from '../src/services/errors';
 import { userRoutes } from '../src/routes/users';
 import { taskRoutes } from '../src/routes/tasks';
+import { assignmentRoutes } from '../src/routes/assignments';
 
 /**
  * Reusable factories and app builder (design §6.1 / §6.2).
@@ -107,5 +108,6 @@ export function buildTestApp(): FastifyInstance {
   app.get('/health', async () => ({ status: 'ok' }));
   app.register(userRoutes, { prefix: '/users' });
   app.register(taskRoutes, { prefix: '/tasks' });
+  app.register(assignmentRoutes, { prefix: '/tasks' });
   return app;
 }

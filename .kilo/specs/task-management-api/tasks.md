@@ -543,9 +543,11 @@ eslint.config.mjs                     (fix: ignore nested dist/)
 
 ---
 
-## T-15: Admin DLQ Endpoint (US-11)
+## T-15: Admin DLQ Endpoint (US-11) ✅ COMPLETED
 
 **Objective:** Implement the DLQ inspection endpoint using AWS SDK to poll the SQS DLQ.
+
+**Run tests:** `npm run test` → 91 passing (incl. 4 in `admin.test.ts`). `tsc --noEmit` (api) and `eslint` clean.
 
 **Files to create/modify:**
 
@@ -564,9 +566,9 @@ packages/api/tests/admin.test.ts
 - `GET /admin/dlq` → 200 (no auth per updated requirements)
 
 **Tests (`tests/admin.test.ts`):**
-- [ ] GET /admin/dlq → 200 with empty array when DLQ is empty
-- [ ] GET /admin/dlq → 200 with messages when DLQ has messages (mocked SQS response)
-- [ ] Messages include: messageId, body, attributes, sentTimestamp
+- [x] GET /admin/dlq → 200 with empty array when DLQ is empty
+- [x] GET /admin/dlq → 200 with messages when DLQ has messages (mocked SQS response)
+- [x] Messages include: messageId, body, attributes, sentTimestamp
 
 **Commit message:** `feat(api): add admin DLQ inspection endpoint`
 

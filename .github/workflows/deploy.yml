@@ -105,6 +105,15 @@ jobs:
       # OIDC federation: assumes the IAM role named in AWS_ROLE_ARN. No access
       # keys are stored in GitHub. Set AWS_ROLE_ARN (and optionally override
       # AWS_REGION) as repository secrets.
+      - name: Print OIDC token claims (debug)
+        env:
+          ID_URL: ${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}
+          ID_TOKEN: ${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}
+        run: |
+          curl -sS -H "Authorization: bearer ${ID_TOKEN}" "${ID_URL}&audience=sts.amazonaws.com" -o /tmp/oidc.jwt
+          # Decode payload (2nd JWT segment) to stdout for diagnosis
+          jq -r 'split(".")[1] | @base64d' /tmp/oidc.jwt
+
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:

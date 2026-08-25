@@ -289,9 +289,11 @@ packages/api/tests/assignments.test.ts
 
 ---
 
-## T-08: Completion Service & Route (US-04) — Core Business Logic
+## T-08: Completion Service & Route (US-04) — Core Business Logic ✅ COMPLETED
 
 **Objective:** Implement the most critical flow: mark task as completed by user, OCC-based archive, and SQS notification enqueue.
+
+**Run tests:** `npm run test` → 60 passing (incl. 12 in `completions.test.ts`). `tsc --noEmit` and `eslint` clean.
 
 **Files to create/modify:**
 
@@ -322,16 +324,16 @@ packages/api/tests/completions.test.ts
 - `POST /tasks/:idTask/complete` → 200 | 404 | 409 | 500
 
 **Tests (`tests/completions.test.ts`):**
-- [ ] Complete → 200 { archived: false } when not last user
-- [ ] Complete → 200 { archived: true } when last user completes
-- [ ] Complete (last) → task status is 'archived' in DB
-- [ ] Complete (last) → SQS.sendMessage is called with correct payload
-- [ ] Complete → 404 when task not found
-- [ ] Complete → 404 when user not found
-- [ ] Complete → 409 when task already archived
-- [ ] Complete → 409 when user not assigned to task
-- [ ] Complete → 409 when user already completed
-- [ ] Complete → 409 VERSION_CONFLICT (simulate OCC race condition)
+- [x] Complete → 200 { archived: false } when not last user
+- [x] Complete → 200 { archived: true } when last user completes
+- [x] Complete (last) → task status is 'archived' in DB
+- [x] Complete (last) → SQS.sendMessage is called with correct payload
+- [x] Complete → 404 when task not found
+- [x] Complete → 404 when user not found
+- [x] Complete → 409 when task already archived
+- [x] Complete → 409 when user not assigned to task
+- [x] Complete → 409 when user already completed
+- [x] Complete → 409 VERSION_CONFLICT (simulate OCC race condition)
 
 **Commit message:** `feat(api): add task completion with OCC archive and SQS notification enqueue`
 

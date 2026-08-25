@@ -17,7 +17,7 @@ API REST para la gestión y asignación de tareas con archivado automático y no
 
 ## Instrucciones de Ejecución
 
-Requisitos: **Node.js >= 20** (recomendado 24.x) y **npm >= 10**.
+Requisitos: **Node.js >= 24** y **npm >= 10**.
 
 ```bash
 # 1. Instalar dependencias de todos los workspaces

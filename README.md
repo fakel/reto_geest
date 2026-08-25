@@ -30,3 +30,7 @@ En la carpeta specs podrá encontrar las especificaciones iniciales definidas en
 ## Nota
 
 Se ha decidido usar Fastify sobre Express por gusto y diversidad. 
+
+## Mejoras Futuras
+- **Autenticación y Autorización:** Implementar JWT o OAuth2 para proteger los endpoints.
+- **Paginación y Filtrado:** Añadir soporte para paginación y filtrado de tareas y usuarios.

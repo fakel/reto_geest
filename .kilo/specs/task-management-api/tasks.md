@@ -501,9 +501,11 @@ packages/api/tests/rate-limit.test.ts
 
 ---
 
-## T-14: App Factory & Lambda Wrapper
+## T-14: App Factory & Lambda Wrapper ✅ COMPLETED
 
 **Objective:** Wire all plugins and routes together into the Fastify app factory and create the AWS Lambda handler.
+
+**Run tests:** `npm run test` → 87 passing (incl. 3 in `app.test.ts`). `tsc --noEmit` (api) and `eslint` clean. Fixed a latent `eslint.config.mjs` gap (nested `**/dist/**` ignore) surfaced by a stale build artifact. Verified `npm run dev` boots and serves `/health`; `buildTestApp` now delegates to the real `buildApp` factory.
 
 **Files to create:**
 
@@ -511,13 +513,15 @@ packages/api/tests/rate-limit.test.ts
 packages/api/src/app.ts
 packages/api/src/lambda.ts
 packages/api/src/index.ts
+packages/api/tests/app.test.ts        (added: buildApp smoke + full flow)
+eslint.config.mjs                     (fix: ignore nested dist/)
 ```
 
 **`app.ts` spec:**
 - Create Fastify instance
 - Register plugins in order: rate-limit → idempotency → SQS → error-handler
-- Register route modules: users, tasks, admin
-- Export `buildApp()` function
+- Register route modules: users, tasks, assign, complete, notifications, admin
+- Export `buildApp(options?)` function (injectable rate-limit/SQS for tests)
 
 **`lambda.ts` spec:**
 - Import `buildApp()`
@@ -529,11 +533,11 @@ packages/api/src/index.ts
 - Call `buildApp()`, listen on PORT (env or 3000)
 
 **Acceptance Criteria:**
-- [ ] `buildApp()` returns a fully configured Fastify instance
-- [ ] All 10 routes are registered and reachable
-- [ ] Plugin order is correct
-- [ ] `npm run dev` starts the server locally
-- [ ] Integration smoke test: create user → create task → assign → complete (full flow)
+- [x] `buildApp()` returns a fully configured Fastify instance
+- [x] All 10 routes are registered and reachable
+- [x] Plugin order is correct
+- [x] `npm run dev` starts the server locally
+- [x] Integration smoke test: create user → create task → assign → complete (full flow)
 
 **Commit message:** `feat(api): wire app factory, lambda handler, and local dev server`
 

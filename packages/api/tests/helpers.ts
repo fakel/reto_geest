@@ -6,6 +6,8 @@ import { AppError } from '../src/services/errors';
 import { userRoutes } from '../src/routes/users';
 import { taskRoutes } from '../src/routes/tasks';
 import { assignmentRoutes } from '../src/routes/assignments';
+import { completionRoutes } from '../src/routes/completions';
+import type { SqsSender } from '../src/services/complete.service';
 
 /**
  * Reusable factories and app builder (design §6.1 / §6.2).
@@ -106,8 +108,17 @@ export function buildTestApp(): FastifyInstance {
   });
 
   app.get('/health', async () => ({ status: 'ok' }));
+
+  // Mock SQS sender decorated on the instance (mirrors the T-09 plugin). Tests
+  // may override `app.sqs.sendMessage` to spy on calls.
+  const mockSqs: SqsSender = {
+    sendMessage: async () => ({ MessageId: 'default-mock' }),
+  };
+  app.decorate('sqs', mockSqs);
+
   app.register(userRoutes, { prefix: '/users' });
   app.register(taskRoutes, { prefix: '/tasks' });
   app.register(assignmentRoutes, { prefix: '/tasks' });
+  app.register(completionRoutes, { prefix: '/tasks' });
   return app;
 }

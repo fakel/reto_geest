@@ -12,6 +12,6 @@ export default tseslint.config(
     }
   },
   {
-    ignores: ['node_modules/**', 'dist/**', 'coverage/**', 'cdk.out/**', '**/*.d.ts']
+    ignores: ['node_modules/**', '**/dist/**', 'coverage/**', 'cdk.out/**', '**/*.d.ts']
   }
 );

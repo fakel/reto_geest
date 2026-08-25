@@ -86,7 +86,7 @@ prisma.config.ts             (Prisma ORM v7: datasource URL for Migrate — no u
 
 ---
 
-## T-03: Environment Configuration & Error Types
+## T-03: Environment Configuration & Error Types ✅ COMPLETED
 
 **Objective:** Create the configuration parser and the error class hierarchy used by all services.
 
@@ -109,10 +109,10 @@ packages/api/src/services/errors.ts
 - `BadRequestError` extends AppError (400)
 
 **Acceptance Criteria:**
-- [ ] `env.ts` parses all 8 variables with defaults where applicable
-- [ ] `env.ts` throws on missing required vars (`DATABASE_URL`, `NOTIFICATION_QUEUE_URL`)
-- [ ] All error classes are exported and constructable
-- [ ] Unit tests in `packages/api/tests/` verify error instantiation and property access
+- [x] `env.ts` parses all 8 variables with defaults where applicable
+- [x] `env.ts` throws on missing required vars (`DATABASE_URL`, `NOTIFICATION_QUEUE_URL`)
+- [x] All error classes are exported and constructable
+- [x] Unit tests in `packages/api/tests/` verify error instantiation and property access
 
 **Commit message:** `feat(api): add environment config parser and AppError hierarchy`
 

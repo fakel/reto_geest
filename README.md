@@ -115,3 +115,4 @@ Se ha decidido usar Fastify sobre Express por gusto y diversidad.
 
 - Definición de SDD: DeepSeek V4 Pro/$0.15 [commit 7d00d1a]
 - T-01: DeepSeek V4 Flash/$0.06 [commit aa14d64]
+- T-02: DeepSeek V4 Flash/$0.12 [commit d4bc8fd]

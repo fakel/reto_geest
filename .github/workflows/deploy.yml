@@ -1,0 +1,125 @@
+name: Deploy to AWS
+
+# Automatic deployment pipeline:
+#   - CI: typecheck + lint + tests run on every push to main and on PRs.
+#   - CD:  if CI passes on `main`, synthesize and deploy the 4 CDK stacks to AWS
+#          using GitHub Actions OpenID Connect (no long-lived access keys).
+#   - Manual: `workflow_dispatch` lets you trigger the full deploy by hand.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/**'
+      - 'infra/**'
+      - 'prisma.config.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/deploy.yml'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  # Required for aws-actions/configure-aws-credentials with `role-to-assume`.
+  id-token: write
+  contents: read
+
+# Never run two deploys at once; queue them instead.
+concurrency:
+  group: deploy-aws
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '24'
+  AWS_REGION: 'us-east-1'
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # CI: validate the code before any deploy is allowed.
+  # ---------------------------------------------------------------------------
+  ci:
+    name: Lint, typecheck & test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # prisma.config.ts references env('DATABASE_URL'); generate doesn't need a
+      # real database, but the var must be present for the config to load.
+      - name: Generate Prisma client
+        run: npm run db:generate
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm run test
+
+  # ---------------------------------------------------------------------------
+  # CD: deploy CDK stacks to AWS (main only / manual).
+  # ---------------------------------------------------------------------------
+  deploy:
+    name: Deploy CDK stacks
+    needs: ci
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run db:generate
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+
+      # OIDC federation: assumes the IAM role named in AWS_ROLE_ARN. No access
+      # keys are stored in GitHub. Set AWS_ROLE_ARN (and optionally override
+      # AWS_REGION) as repository secrets.
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Bootstrap CDK (if needed)
+        run: npm run cdk -- bootstrap aws://${{ secrets.AWS_ACCOUNT_ID }}/${{ env.AWS_REGION }}
+        working-directory: infra
+        env:
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+
+      - name: Synthesize stacks
+        run: npm run synth
+        working-directory: infra
+        env:
+          NOTIFY_URL: ${{ secrets.NOTIFY_URL }}
+
+      - name: Deploy all stacks
+        run: npm run deploy -- --all --require-approval never
+        working-directory: infra
+        env:
+          NOTIFY_URL: ${{ secrets.NOTIFY_URL }}

@@ -7,6 +7,7 @@ import { userRoutes } from '../src/routes/users';
 import { taskRoutes } from '../src/routes/tasks';
 import { assignmentRoutes } from '../src/routes/assignments';
 import { completionRoutes } from '../src/routes/completions';
+import { notificationRoutes } from '../src/routes/notifications';
 import type { SqsSender } from '../src/services/complete.service';
 
 /**
@@ -120,5 +121,6 @@ export function buildTestApp(): FastifyInstance {
   app.register(taskRoutes, { prefix: '/tasks' });
   app.register(assignmentRoutes, { prefix: '/tasks' });
   app.register(completionRoutes, { prefix: '/tasks' });
+  app.register(notificationRoutes, { prefix: '/tasks' });
   return app;
 }

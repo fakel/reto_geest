@@ -252,9 +252,11 @@ packages/api/tests/tasks.test.ts
 
 ---
 
-## T-07: Assignment Service & Route (US-03)
+## T-07: Assignment Service & Route (US-03) ✅ COMPLETED
 
 **Objective:** Implement task-user assignment with validation (task exists, user exists, task not archived, no duplicates).
+
+**Run tests:** `npm run test` → 48 passing (incl. 7 in `assignments.test.ts`). `tsc --noEmit` and `eslint` clean.
 
 **Files to create/modify:**
 
@@ -276,12 +278,12 @@ packages/api/tests/assignments.test.ts
 - `POST /tasks/:idTask/assign` → 200 | 400 | 404 | 409
 
 **Tests (`tests/assignments.test.ts`):**
-- [ ] Assign users to task → 200 with updated assignments
-- [ ] Assign → 404 when task not found
-- [ ] Assign → 404 when any userId not found
-- [ ] Assign → 409 when task already archived
-- [ ] Assign → 409 when user already assigned (duplicate)
-- [ ] Assign → 400 when userIds is empty array
+- [x] Assign users to task → 200 with updated assignments
+- [x] Assign → 404 when task not found
+- [x] Assign → 404 when any userId not found
+- [x] Assign → 409 when task already archived
+- [x] Assign → 409 when user already assigned (duplicate)
+- [x] Assign → 400 when userIds is empty array
 
 **Commit message:** `feat(api): add task assignment service and route with full validation`
 

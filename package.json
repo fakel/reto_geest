@@ -17,6 +17,7 @@
     "typecheck": "tsc -p packages/api/tsconfig.json --noEmit && tsc -p packages/worker/tsconfig.json --noEmit && tsc -p infra/tsconfig.json --noEmit",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
+    "smoke:deploy": "node scripts/smoke-deploy.mjs",
     "prepare": "husky"
   },
   "devDependencies": {

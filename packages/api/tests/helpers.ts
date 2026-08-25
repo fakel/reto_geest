@@ -2,12 +2,12 @@ import { randomUUID } from 'node:crypto';
 import Fastify, { FastifyInstance } from 'fastify';
 import { PrismaClient, User, Task, TaskAssignment } from '@prisma/client';
 import { prisma as setupPrisma } from './setup';
-import { AppError } from '../src/services/errors';
 import { userRoutes } from '../src/routes/users';
 import { taskRoutes } from '../src/routes/tasks';
 import { assignmentRoutes } from '../src/routes/assignments';
 import { completionRoutes } from '../src/routes/completions';
 import { notificationRoutes } from '../src/routes/notifications';
+import { installErrorHandler } from '../src/plugins/error-handler';
 import type { SqsSender } from '../src/services/complete.service';
 
 /**
@@ -91,22 +91,7 @@ export function createTestAssignment(
 export function buildTestApp(): FastifyInstance {
   const app = Fastify({ logger: false });
 
-  app.setErrorHandler((error, request, reply) => {
-    if (error instanceof AppError) {
-      return reply
-        .status(error.statusCode)
-        .send({ error: { code: error.code, message: error.message } });
-    }
-    if (error.validation) {
-      return reply
-        .status(400)
-        .send({ error: { code: 'VALIDATION_ERROR', message: error.message } });
-    }
-    request.log.error(error);
-    return reply
-      .status(500)
-      .send({ error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred' } });
-  });
+  installErrorHandler(app);
 
   app.get('/health', async () => ({ status: 'ok' }));
 

@@ -7,7 +7,9 @@ import { taskRoutes } from '../src/routes/tasks';
 import { assignmentRoutes } from '../src/routes/assignments';
 import { completionRoutes } from '../src/routes/completions';
 import { notificationRoutes } from '../src/routes/notifications';
+import { adminRoutes } from '../src/routes/admin';
 import { installErrorHandler } from '../src/plugins/error-handler';
+import idempotencyPlugin from '../src/plugins/idempotency';
 import type { SqsSender } from '../src/services/complete.service';
 
 /**
@@ -93,6 +95,10 @@ export function buildTestApp(): FastifyInstance {
 
   installErrorHandler(app);
 
+  // Idempotency hooks all POST routes (registered before routes so its hooks
+  // apply app-wide). Register() is queued and resolved when the app readies.
+  app.register(idempotencyPlugin);
+
   app.get('/health', async () => ({ status: 'ok' }));
 
   // Mock SQS sender decorated on the instance (mirrors the T-09 plugin). Tests
@@ -107,5 +113,6 @@ export function buildTestApp(): FastifyInstance {
   app.register(assignmentRoutes, { prefix: '/tasks' });
   app.register(completionRoutes, { prefix: '/tasks' });
   app.register(notificationRoutes, { prefix: '/tasks' });
+  app.register(adminRoutes, { prefix: '/admin' });
   return app;
 }

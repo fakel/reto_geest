@@ -19,6 +19,13 @@ const adapter = new PgMemDriverAdapter();
 export const prisma: PrismaClient = new PrismaClient({ adapter });
 setPrismaClient(prisma);
 
+// Provide the env vars plugins call getEnv() on (e.g. idempotency/SQS) so they
+// parse successfully in tests without a real database/queue.
+process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgresql://user:pass@localhost:5432/test';
+process.env.NOTIFICATION_QUEUE_URL =
+  process.env.NOTIFICATION_QUEUE_URL || 'https://sqs.us-east-1.amazonaws.com/000/queue';
+process.env.DLQ_URL = process.env.DLQ_URL || 'https://sqs.us-east-1.amazonaws.com/000/dlq';
+
 /** 4. Push the schema into pg-mem once per test file. */
 beforeAll(async () => {
   await adapter.executeScript(schemaDDL);

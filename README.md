@@ -59,8 +59,9 @@ npm run dev
 | `npm run build` | Compila tsc de api y worker a `dist/` |
 | `npm run db:generate` | Genera el Prisma Client (lee `prisma.config.ts`) |
 | `npm run db:migrate` | Migraciones de Prisma (dev) |
+| `npm run smoke:deploy` | Smoke-test del despliegue AWS (`API_URL=...`) |
 
-> Nota: `npm run test` usa `--passWithNoTests` para que el pipeline CI salga limpio hasta que existan suites de pruebas (a partir de T-04). A día de hoy (T-16) la suite pasa **97 tests** en 15 archivos (api + worker), sin necesidad de Docker/PostgreSQL (pg-mem).
+> Nota: `npm run test` usa `--passWithNoTests` para que el pipeline CI salga limpio hasta que existan suites de pruebas (a partir de T-04). A día de hoy la suite pasa **106 tests** en 17 archivos (api + worker), sin necesidad de Docker/PostgreSQL (pg-mem).
 
 ### Variables de Entorno
 
@@ -107,10 +108,13 @@ RETO GEEST/
 │   ├── bin/
 │   │   └── app.ts              # Entrada CDK: Network → Database → Queue → API
 │   └── lib/
-│       ├── network-stack.ts    # VPC (single AZ) + NAT instance t3.micro + SG Lambdas
-│       ├── database-stack.ts   # RDS PostgreSQL 16 (t3.micro free tier) + Secret
+│       ├── network-stack.ts    # VPC 2 AZ (requerido por RDS) + NAT instance t3.micro + SG Lambdas
+│       ├── database-stack.ts   # RDS PostgreSQL 16 (t3.micro free tier) + Secret + migración auto
+│       ├── migration-runner.ts # Lambda que aplica schema.sql al RDS al desplegar (custom resource)
 │       ├── queue-stack.ts      # SQS principal + DLQ + Worker Lambda (event source)
 │       └── api-stack.ts        # API Lambda + HTTP API Gateway ($default)
+├── scripts/
+│   └── smoke-deploy.mjs        # Smoke-test del despliegue en Node (npm run smoke:deploy)
 ├── cdk.out/                    # Salida de `cdk synth` (gitignored)
 ├── .kilo/specs/                # Especificaciones del proyecto (SDD: requirements, design, tasks)
 ├── vitest.config.ts            # Config Vitest (setupFiles + inclusion de tests)
@@ -145,15 +149,15 @@ En la carpeta `.kilo/specs/` podrá encontrar las especificaciones iniciales (re
 | T-14 | ✅ Completado (app factory + Lambda handler + dev server) |
 | T-15 | ✅ Completado (admin DLQ endpoint) |
 | T-16 | ✅ Completado (worker SQS + webhook delivery) |
-| T-17 | ✅ Completado (CDK infra: single-AZ + single-NAT) |
+| T-17 | ✅ Completado (CDK infra: 2-AZ net + instancia RDS single-AZ + NAT instance) |
 | T-18 | ✅ Completado (E2E: full workflow + OCC concurrencia) |
 
 ## Despliegue en AWS (CDK)
 
 La infraestructura se define como código en `infra/` con **AWS CDK v2** y se compone de 4 stacks en orden: **Network → Database → Queue → API**.
 
-- **`NetworkStack`** — VPC single-AZ (una AZ, 1 subnet privada + 1 pública) con **1 NAT instance** (`t3.micro`, Amazon Linux 2023) para egress de las Lambdas, y SG compartido de Lambdas.
-- **`DatabaseStack`** — RDS PostgreSQL 16 (`db.t3.micro`, *free-tier*), single-AZ, no público; credenciales auto-generadas en **Secrets Manager**; expone `DATABASE_URL` resuelto en deploy.
+- **`NetworkStack`** — VPC en **2 AZs** (RDS exige subnets en ≥2 AZ; los subnets son gratis) con **1 NAT instance** (`t3.micro`, Amazon Linux 2023) en la primera AZ para egress de las Lambdas, y SG compartido de Lambdas.
+- **`DatabaseStack`** — RDS PostgreSQL 16 (`db.t3.micro`, *free-tier*), instancia single-AZ, no público; credenciales auto-generadas en **Secrets Manager**; expone `DATABASE_URL` resuelto en deploy. Incluye una **Lambda de migración** (custom resource) que aplica `packages/api/prisma/schema.sql` automáticamente al crearse la instancia.
 - **`QueueStack`** — SQS principal (`maxReceiveCount: 3`, visibility 30s) con **DLQ** (retención 14 días) + **Worker Lambda** (NodeJS 24.x) con event source SQS.
 - **`ApiStack`** — **API Lambda** (NodeJS 24.x, 512 MB, 29s) expuesta por **API Gateway HTTP API** (`$default` → proxy), con colas y rate-limit cableados.
 
@@ -165,7 +169,13 @@ npm run deploy   # cdk deploy --all — despliega los 4 stacks
 npm run diff     # cdk diff — cambios pendientes
 ```
 
-> Requiere credenciales AWS configuradas (`aws configure` / SSO) y `NOTIFY_URL` en el entorno para el Worker. Los stacks se nombran explícitamente `reto-geest-<STACK_ENV>-<tipo>` (default `STACK_ENV=dev`) para que convivan sin colisionar con otros stacks en la misma cuenta AWS. Diseño orientado a *free tier* (single-AZ, `db.t3.micro` en RDS y NAT instance), reemplazando el NAT **gateway** gestionado por una **NAT instance EC2** (`t3.micro`) para reducir el costo de egress.
+Verificación post-despliegue (desde la raíz):
+
+```bash
+API_URL="https://<id>.execute-api.<region>.amazonaws.com" npm run smoke:deploy
+```
+
+> Requiere credenciales AWS configuradas (`aws configure` / SSO) y `NOTIFY_URL` en el entorno para el Worker. Los stacks se nombran explícitamente `reto-geest-<STACK_ENV>-<tipo>` (default `STACK_ENV=dev`) para que convivan sin colisionar con otros stacks en la misma cuenta AWS. Si otra infraestructura ocupa `10.0.0.0/16`, despliega con un CIDR disjunto (`VPC_CIDR=10.20.0.0/16`). Diseño orientado a *free tier*: VPC de **2 AZs** (subnets gratis, requerido por RDS), instancia RDS **single-AZ** (`db.t3.micro`), y **NAT instance EC2** (`t3.micro`) en vez de NAT gateway para reducir el costo de egress.
 
 ## Nota
 
@@ -196,4 +206,4 @@ Se ha decidido usar Fastify sobre Express por gusto y diversidad.
 - T-16: DeepSeek V4 Flash/$0.06 [commit 22959c6]
 - T-17: DeepSeek V4 Flash/$0.09 [commit a7380c0]
 - T-18: DeepSeek V4 Flash/$0.09 [commit 00e9bfa]
-- Post SDD adjustments: DeepSeek V4 Flash/$0.22
+- Post SDD adjustments: DeepSeek V4 Flash/$0.58

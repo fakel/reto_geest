@@ -10,8 +10,8 @@ El despliegue crea **4 stacks CDK** en orden:
 
 | Stack | Crea |
 |-------|------|
-| `NetworkStack` | VPC single-AZ (1 subnet privada + 1 pública), 1 **NAT instance** (`t3.micro`, AL2023) en vez de NAT gateway, SG compartido de Lambdas |
-| `DatabaseStack` | RDS PostgreSQL 16 (`db.t3.micro`, free-tier), secret en Secrets Manager, `DATABASE_URL` |
+| `NetworkStack` | VPC en **2 AZs** (requisito de RDS), 1 **NAT instance** (`t3.micro`, AL2023) en la 1ª AZ en vez de NAT gateway, SG compartido de Lambdas |
+| `DatabaseStack` | RDS PostgreSQL 16 (`db.t3.micro`, free-tier), secret en Secrets Manager, `DATABASE_URL` + **migración automática** del esquema |
 | `QueueStack` | SQS principal + DLQ (redrive 3), Worker Lambda (NodeJS 24.x) con event source SQS |
 | `ApiStack` | API Lambda (NodeJS 24.x) + API Gateway HTTP API (`$default`), env de colas y rate-limit |
 
@@ -48,6 +48,9 @@ Copia `.env.example` → `.env` y ajusta los valores (ver sección de variables 
 | `NOTIFY_URL` | Worker → webhook objetivo | Sí (para el `QueueStack`) |
 | `AWS_REGION` | Región de despliegue | Sí |
 | `STACK_ENV` | Etiqueta del entorno en el nombre de los stacks (default `dev`) | Opcional |
+| `VPC_CIDR` | CIDR base de la VPC (default `10.0.0.0/16`) | Opcional |
+
+> **Colisión de CIDR:** si otro stack/entorno en la misma cuenta ya usa `10.0.0.0/16`, asigna un rango disjunto, p. ej. `export VPC_CIDR=10.20.0.0/16`, para evitar el error `The CIDR ... conflicts with another subnet`. Aplica también a la hora de re-desplegar sobre una VPC huérfana del primer intento fallido.
 
 > **Fallback de `NOTIFY_URL`:** si queda **vacía/sin configurar**, el Worker no crashea: **no intenta entregar** y lanza al procesar el mensaje, de modo que SQS lo reintenta y lo **desvía a la DLQ** tras `maxReceiveCount` (3) intentos. Útil para entornos de prueba sin webhook real. `DATABASE_URL` sí sigue siendo obligatoria.
 
@@ -239,7 +242,17 @@ Repo → Settings → **Environments** → **New environment** → `production`.
    curl -s $API/admin/dlq
    ```
 
-4. Revisa los logs de Lambda (CloudWatch) para confirmar que el Worker entregó el webhook.
+4. **Alternativa en Node.js (sin curl, sin dependencias):** smoke-test automático que ejecuta el mismo flujo completo (health → crear usuario → crear task → asignar → completar → notificaciones → DLQ) con `fetch` nativo:
+
+   ```bash
+   API_URL="<API_URL>" npm run smoke:deploy
+   # o directamente:
+   API_URL="<API_URL>" node scripts/smoke-deploy.mjs
+   ```
+
+   Fija cuánto esperar por petición con `SMOKE_TIMEOUT_MS` (por defecto 15000). El script imprime cada comprobación y sale con código 0 si todo pasó, o 1 si algo falló (válido para CI).
+
+5. Revisa los logs de Lambda (CloudWatch) para confirmar que el Worker entregó el webhook.
 
 ---
 
@@ -249,8 +262,11 @@ Repo → Settings → **Environments** → **New environment** → `production`.
 |--------|----------------------|
 | **API** | `DATABASE_URL`, `NOTIFICATION_QUEUE_URL`, `DLQ_URL`, `RATE_LIMIT_MAX`, `RATE_LIMIT_WINDOW_MS`, `NODE_ENV=production` |
 | **Worker** | `DATABASE_URL`, `NOTIFY_URL`, `NODE_ENV=production` |
+| **DB Migration** | `DATABASE_URL` (aplica `schema.sql` en el primer deploy) |
 
 > `DATABASE_URL` se resuelve en deploy desde el secret de RDS; `NOTIFICATION_QUEUE_URL`/`DLQ_URL` se importan del `QueueStack`.
+
+> **SSL obligatorio:** RDS viene con `force_ssl`. API, Worker y la Lambda de migración conectan con `ssl: { rejectUnauthorized: false }` — tráfico cifrado aceptando la cadena de CA de RDS. Sin SSL, RDS rechaza la conexión (`no pg_hba.conf entry ... no encryption`).
 
 ---
 
@@ -261,7 +277,26 @@ Repo → Settings → **Environments** → **New environment** → `production`.
 
 ---
 
-## 9. Teardown (eliminar infraestructura)
+## 9. Troubleshooting
+
+Errores comunes al desplegar en una cuenta nueva/compartida y cómo se resuelven (ya incorporados al código):
+
+| Síntoma | Causa | Solución en el código |
+|---------|-------|-----------------------|
+| `The CIDR ... conflicts with another subnet` | Otro stack/entorno usa `10.0.0.0/16` | `VPC_CIDR` configurable (default `10.0.0.0/16`) |
+| `DB subnet group doesn't meet AZ coverage` | VPC de 1 sola AZ | `maxAzs: 2` en `NetworkStack` |
+| `Invalid rule description` | Carácter Unicode (`→`) en descripción de SG | Descripciones ASCII |
+| `UnreservedConcurrentExecution below ... [10]` | `ReservedConcurrentExecutions` con límite de cuenta bajo | Sin reserva de concurrencia |
+| `Partition "//sqs..." is not valid` | Grant IAM con URL de cola en vez de ARN | `SqsQueue.queueArn` en el policy |
+| `no pg_hba.conf entry ... no encryption` | Conexión sin SSL a RDS | `ssl: { rejectUnauthorized: false }` |
+| SQS / `complete` cuelga hasta el timeout (29 s) | NAT instance sin regla de entrada (tráfico de retorno) | `NatTrafficDirection.INBOUND_AND_OUTBOUND` |
+| `POST /users` → 500 `INTERNAL_ERROR` | RDS sin tablas (esquema no aplicado) / falta SSL | Re-desplegar `DatabaseStack` (migración automática) |
+
+> Si un despliegue falla a mitad, elimina los stacks huérfanos antes de reintentar: `aws cloudformation delete-stack --stack-name reto-geest-dev-<stack>` (o `cdk destroy`).
+
+---
+
+## 10. Teardown (eliminar infraestructura)
 
 ```bash
 cd infra
@@ -271,11 +306,11 @@ NOTIFY_URL='https://example.com/webhook' npx cdk destroy --all --force
 
 ---
 
-## 10. Costos
+## 11. Costos
 
 Diseño orientado a *free tier / mínimo costo*:
-- **single-AZ** y **`db.t3.micro`** (eligible free tier) para RDS.
+- VPC en **2 AZs** (subnets gratis; RDS exige el subnet group en ≥2 AZ) y **instancia RDS single-AZ** con `db.t3.micro` (eligible free tier).
 - **1 NAT instance EC2** (`t3.micro`, Amazon Linux 2023) reemplaza al NAT gateway para el egress de las Lambdas → en cuentas nuevas es **gratuita durante 12 meses** (750 h/mes de EC2 free tier); tras el periodo, ~$7/mes vs ~$33/mes del NAT gateway gestionado.
-- Lambdas sin costo en volúmenes bajos dentro del free tier.
+- Las Lambdas y el NAT se sitúan en la **primera AZ**; únicamente la primera subnet privada lleva la ruta egress al NAT, de modo que el egress funciona con 1 solo NAT instance.
 
 > La NAT instance usa una IP pública auto-asignada (no un Elastic IP) para mantener el costo mínimo; si la reinicias pierdes la IP pública. Para producción considera adjuntar un EIP (sin cargo mientras está asociado a la instancia). Consulta también la alternativa de VPC endpoints en `README.md`.

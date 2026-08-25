@@ -42,7 +42,7 @@ Variables requeridas en `.env`: `DATABASE_URL`, `NOTIFICATION_QUEUE_URL`, `DLQ_U
 - Sin autenticación establecida, la API es **pública** para el ejercicio.
 - Nombre de Base de Datos fijo (`reto_geest`) y credenciales generadas por RDS + Secrets Manager.
 
-## 4. Funcionalidades recortadas (por falta de tiempo)
+## 4. Funcionalidades recortadas (por falta de tiempo/innecesarias para el ejercicio)
 
 - **Autenticación/Autorización** (JWT/OAuth2): endpoints públicos.
 - **Paginación y filtrado** de usuarios/tareas: listados completos.

@@ -369,9 +369,11 @@ packages/api/src/plugins/sqs.ts
 
 ---
 
-## T-10: Notification History Route (US-09)
+## T-10: Notification History Route (US-09) ✅ COMPLETED
 
 **Objective:** Expose notification attempt history per task.
+
+**Run tests:** `npm run test` → 68 passing (incl. 3 in `notifications.test.ts`). `tsc --noEmit` and `eslint` clean.
 
 **Files to create/modify:**
 
@@ -388,10 +390,10 @@ packages/api/tests/notifications.test.ts
 - `GET /tasks/:idTask/notifications` → 200 | 404
 
 **Tests (`tests/notifications.test.ts`):**
-- [ ] GET notifications → 200 with list of attempts
-- [ ] GET notifications → 200 empty array when no attempts
-- [ ] GET notifications → 404 when task not found
-- [ ] Each attempt includes: id, taskId, status, statusCode, responseBody, attemptNumber, createdAt
+- [x] GET notifications → 200 with list of attempts
+- [x] GET notifications → 200 empty array when no attempts
+- [x] GET notifications → 404 when task not found
+- [x] Each attempt includes: id, taskId, status, statusCode, responseBody, attemptNumber, createdAt
 
 **Commit message:** `feat(api): add notification history endpoint per task`
 

@@ -28,13 +28,12 @@ erDiagram
     }
 
     task_assignments {
-        text id PK
-        text user_id FK "users.id (ON DELETE CASCADE)"
-        text task_id FK "tasks.id (ON DELETE CASCADE)"
+        text id PK "PK"
+        text user_id FK "FK users.id (ON DELETE CASCADE)"
+        text task_id FK "FK tasks.id (ON DELETE CASCADE)"
         boolean completed "default false"
         timestamp created_at
         timestamp updated_at
-        "" UK "(user_id, task_id) sin duplicados"
     }
 
     idempotency_keys {
@@ -46,13 +45,11 @@ erDiagram
         text response_body
         timestamp created_at
         timestamp expires_at "TTL"
-        "" IDX "(key_hash, method, path)"
-        "" IDX "expires_at"
     }
 
     notification_attempts {
         text id PK
-        text task_id FK "tasks.id (ON DELETE CASCADE)"
+        text task_id FK "FK tasks.id (ON DELETE CASCADE)"
         text status "success | failed"
         int status_code "HTTP del webhook"
         text response_body
@@ -60,6 +57,11 @@ erDiagram
         timestamp created_at
     }
 ```
+
+> **Restricciones** (nivel de Base de Datos, no visibles como columnas en el diagrama):
+> - `task_assignments`: índice único `(user_id, task_id)` — evita asignaciones duplicadas.
+> - `idempotency_keys`: índice por `key_hash`; índices en `(key_hash, method, path)` y `expires_at` (limpieza TTL).
+> - FKs: todas con `ON DELETE CASCADE`.
 
 ## Relaciones
 

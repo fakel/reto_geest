@@ -60,7 +60,7 @@ npm run dev
 | `npm run db:generate` | Genera el Prisma Client (lee `prisma.config.ts`) |
 | `npm run db:migrate` | Migraciones de Prisma (dev) |
 
-> Nota: `npm run test` usa `--passWithNoTests` para que el pipeline CI salga limpio hasta que existan suites de pruebas (a partir de T-04). A día de hoy (T-14) la suite pasa **87 tests** en 13 archivos, sin necesidad de Docker/PostgreSQL (pg-mem).
+> Nota: `npm run test` usa `--passWithNoTests` para que el pipeline CI salga limpio hasta que existan suites de pruebas (a partir de T-04). A día de hoy (T-16) la suite pasa **97 tests** en 15 archivos (api + worker), sin necesidad de Docker/PostgreSQL (pg-mem).
 
 ### Variables de Entorno
 
@@ -90,15 +90,19 @@ RETO GEEST/
 │   │   │   ├── index.ts        # Entrada local (npm run dev → PORT 3000)
 │   │   │   ├── lambda.ts       # Handler AWS Lambda (API Gateway HTTP API v2)
 │   │   │   ├── routes/         # users, tasks, assignments, completions, notifications, admin
-│   │   │   ├── services/       # lógica de negocio (user, task, assign, complete, notification, idempotency)
+│   │   │   ├── services/       # lógica de negocio (user, task, assign, complete, notification, idempotency, dlq)
 │   │   │   ├── plugins/        # rate-limit, idempotency, sqs, error-handler
 │   │   │   ├── schemas/        # JSON Schema (fastify) por recurso
 │   │   │   └── config/         # env.ts y database.ts (singleton Prisma)
 │   │   ├── prisma/             # schema.prisma + DDL
 │   │   └── tests/              # suites Vitest + pg-mem (incl. app.test.ts, E2E helpers)
-│   └── worker/                 # Lambda consumidora de SQS (webhook delivery) [T-16]
-│       ├── src/                # handler, webhook, notification-log
-│       └── tests/              # suites Vitest
+│   └── worker/                 # Lambda consumidora de SQS (webhook delivery)
+│       ├── src/
+│       │   ├── index.ts        # handler SQS (procesa records → webhook → log)
+│       │   ├── webhook.ts      # POST a NOTIFY_URL con timeout (5xx → retry SQS)
+│       │   ├── notification-log.ts # Insert de NotificationAttempt en RDS
+│       │   └── config/env.ts   # DATABASE_URL + NOTIFY_URL
+│       └── tests/              # worker.test.ts + setup pg-mem propio
 ├── infra/                      # Infraestructura AWS CDK (VPC, RDS, SQS/DLQ, Lambdas) [T-17]
 │   ├── bin/                    # app.ts (entrada CDK)
 │   └── lib/                    # stacks (network, database, queue, api)
@@ -131,11 +135,11 @@ En la carpeta `.kilo/specs/` podrá encontrar las especificaciones iniciales (re
 
 | Etapa | Estado |
 |-------|--------|
-| T-01 a T-11 | ✅ Completado y commiteado |
-| T-12 | ✅ Completado (idempotencia + admin cleanup) |
-| T-13 | ✅ Completado (rate limiting) |
-| T-14 | ⏳ Implementado y verificado (87 tests) — pendiente de commit por aprobación |
-| T-15 a T-18 | ⏸️ Pendiente (DLQ admin, worker, CDK, E2E finales) |
+| T-01 a T-13 | ✅ Completado y commiteado |
+| T-14 | ✅ Completado (app factory + Lambda handler + dev server) |
+| T-15 | ✅ Completado (admin DLQ endpoint) |
+| T-16 | ✅ Completado (worker SQS + webhook delivery) |
+| T-17 a T-18 | ⏸️ Pendiente (CDK infra, E2E finales) |
 
 ## Nota
 
@@ -163,4 +167,4 @@ Se ha decidido usar Fastify sobre Express por gusto y diversidad.
 - T-13: DeepSeek V4 Flash/$0.13 [commit 3cfe4db]
 - T-14: DeepSeek V4 Flash/$0.04 [commit 58beb5c]
 - T-15: DeepSeek V4 Flash/$0.04 [commit 977671d]
-- T-16: DeepSeek V4 Flash/$0.06 [commit 977671d]
+- T-16: DeepSeek V4 Flash/$0.06 [commit 22959c6]

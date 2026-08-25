@@ -40,7 +40,7 @@ NetworkStack ──► DatabaseStack ──► QueueStack ──► ApiStack
 ## 3. Variables de entorno
 
 ### 3.1 Local (`.env`)
-Copia `.env.example` → `.env` y ajusta los valores (ver sección de variables en el README). Para el despliegue CDK solo son necesarias en tiempo de *build*:
+Copia `.env.example` → `.env` y ajusta los valores (variables en el README §1, tabla completa en `.env.example`). Para el despliegue CDK solo son necesarias en tiempo de *build*:
 
 | Variable | Uso | ¿Necesaria en synth? |
 |----------|-----|----------------------|

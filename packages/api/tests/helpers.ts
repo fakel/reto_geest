@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto';
 import Fastify, { FastifyInstance } from 'fastify';
 import { PrismaClient, User, Task, TaskAssignment } from '@prisma/client';
 import { prisma as setupPrisma } from './setup';
+import { AppError } from '../src/services/errors';
+import { userRoutes } from '../src/routes/users';
 
 /**
  * Reusable factories and app builder (design §6.1 / §6.2).
@@ -76,9 +78,32 @@ export function createTestAssignment(
   });
 }
 
-/** Build a minimal Fastify app for E2E tests. Real routes are wired up in later tasks. */
+/**
+ * Build a Fastify app with the user routes registered and the standard error
+ * handler (design §7) wired in. Used for E2E API tests. More routes are added
+ * as later tasks land; T-14 replaces this with the real app factory.
+ */
 export function buildTestApp(): FastifyInstance {
   const app = Fastify({ logger: false });
+
+  app.setErrorHandler((error, request, reply) => {
+    if (error instanceof AppError) {
+      return reply
+        .status(error.statusCode)
+        .send({ error: { code: error.code, message: error.message } });
+    }
+    if (error.validation) {
+      return reply
+        .status(400)
+        .send({ error: { code: 'VALIDATION_ERROR', message: error.message } });
+    }
+    request.log.error(error);
+    return reply
+      .status(500)
+      .send({ error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred' } });
+  });
+
   app.get('/health', async () => ({ status: 'ok' }));
+  app.register(userRoutes, { prefix: '/users' });
   return app;
 }

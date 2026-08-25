@@ -170,7 +170,7 @@ push a main / manual ──► CI (lint + typecheck + test) ──► CD (synth 
 
 **c) Adjuntar la policy de permisos al rol** (mínima suficiente para CDK):
 
-`iam:PassRole` se acota a los roles creados por CDK (prefijo `reto-geest-*`) y a los servicios que CDK/las Lambdas usan (`iam:PassedToService`), evitando wildcard total. `ecr:*` se omite porque las Lambdas no usan ECR (bundle vía `NodejsFunction` → S3).
+`iam:PassRole` se acota a los roles del proyecto creados por CDK — **tanto los `reto-geest-*` como los de `cdk bootstrap` (`cdk-hnb659fds-*`)** — y a los servicios que CDK/Lambdas usan (`iam:PassedToService`), evitando wildcard total. `ecr:*` se omite porque las Lambdas no usan ECR (bundle vía `NodejsFunction` → S3).
 
 ```json
 {
@@ -201,7 +201,10 @@ push a main / manual ──► CI (lint + typecheck + test) ──► CD (synth 
       "Sid": "PassRolesToServices",
       "Effect": "Allow",
       "Action": "iam:PassRole",
-      "Resource": "arn:aws:iam::*:role/reto-geest-*",
+      "Resource": [
+        "arn:aws:iam::*:role/reto-geest-*",
+        "arn:aws:iam::*:role/cdk-hnb659fds-*"
+      ],
       "Condition": {
         "StringEquals": {
           "iam:PassedToService": [

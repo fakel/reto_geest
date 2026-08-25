@@ -47,6 +47,9 @@ Copia `.env.example` → `.env` y ajusta los valores (ver sección de variables 
 | `DATABASE_URL` | `prisma generate` / config de Prisma | Sí (placeholder vale) |
 | `NOTIFY_URL` | Worker → webhook objetivo | **Sí** (para el `QueueStack`) |
 | `AWS_REGION` | Región de despliegue | Sí |
+| `STACK_ENV` | Etiqueta del entorno en el nombre de los stacks (default `dev`) | Opcional |
+
+> **Nombres de stack (colisión-safe):** los stacks reciben nombres CloudFormation explícitos `reto-geest-<STACK_ENV>-<tipo>` (p. ej. `reto-geest-dev-api`). Usa un `STACK_ENV` distinto por entorno (dev → stage → prod) y por cuenta para que coexistan sin colisionar.
 
 > `DATABASE_URL` final de las Lambdas se construye en **tiempo de deploy** a partir del secret de RDS (ver `database-stack.ts`), no se necesita el valor real localmente.
 
@@ -58,6 +61,7 @@ Para el pipeline automático (OIDC):
 | `AWS_ROLE_ARN` | ARN del rol IAM federado (OIDC) con permisos de despliegue |
 | `AWS_ACCOUNT_ID` | ID de tu cuenta AWS (ej. `123456789012`) |
 | `NOTIFY_URL` | URL del webhook destino para el Worker |
+| `STACK_ENV` | Sufijo de entorno en los nombres de stack (p. ej. `prod`) |
 | (opcional) `AWS_REGION` | Sobrescribe la región si no es `us-east-1` |
 
 ---

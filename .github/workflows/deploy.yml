@@ -33,6 +33,9 @@ concurrency:
 env:
   NODE_VERSION: '24'
   AWS_REGION: 'us-east-1'
+  # Suffix embedded in every CloudFormation stack name (e.g. reto-geest-<env>-api)
+  # to avoid collisions with other stacks on the same AWS account.
+  STACK_ENV: ${{ vars.STACK_ENV || 'dev' }}
 
 jobs:
   # ---------------------------------------------------------------------------

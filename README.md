@@ -165,7 +165,7 @@ npm run deploy   # cdk deploy --all — despliega los 4 stacks
 npm run diff     # cdk diff — cambios pendientes
 ```
 
-> Requiere credenciales AWS configuradas (`aws configure` / SSO) y `NOTIFY_URL` en el entorno para el Worker. Diseño orientado a *free tier* (single-AZ, `db.t3.micro` en RDS y NAT instance), reemplazando el NAT **gateway** gestionado por una **NAT instance EC2** (`t3.micro`) para reducir el costo de egress.
+> Requiere credenciales AWS configuradas (`aws configure` / SSO) y `NOTIFY_URL` en el entorno para el Worker. Los stacks se nombran explícitamente `reto-geest-<STACK_ENV>-<tipo>` (default `STACK_ENV=dev`) para que convivan sin colisionar con otros stacks en la misma cuenta AWS. Diseño orientado a *free tier* (single-AZ, `db.t3.micro` en RDS y NAT instance), reemplazando el NAT **gateway** gestionado por una **NAT instance EC2** (`t3.micro`) para reducir el costo de egress.
 
 ## Nota
 

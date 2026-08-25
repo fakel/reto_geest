@@ -163,9 +163,11 @@ vitest.config.ts              (root or api-level)
 
 ---
 
-## T-05: User Service & Routes (US-01, US-06, US-07)
+## T-05: User Service & Routes (US-01, US-06, US-07) ✅ COMPLETED
 
 **Objective:** Implement user CRUD, list users with pending tasks, and list specific user's tasks.
+
+**Run tests:** `npm run test` → 30 passing (incl. 11 in `users.test.ts`). `tsc --noEmit` and `eslint` clean.
 
 **Files to create/modify:**
 
@@ -192,16 +194,16 @@ packages/api/tests/users.test.ts
 - Response schemas for 201, 200
 
 **Tests (`tests/users.test.ts`):**
-- [ ] POST /users → 201 with valid data (includes UUID id)
-- [ ] POST /users → 400 when name missing
-- [ ] POST /users → 400 when lastName missing
-- [ ] POST /users → 400 when email missing
-- [ ] POST /users → 400 when email format invalid
-- [ ] POST /users → 409 when email already exists
-- [ ] GET /users → 200 with list of users (includes pending tasks)
-- [ ] GET /users → 200 empty array when no users
-- [ ] GET /users/:idUser/tasks → 200 with user's tasks and completion status
-- [ ] GET /users/:idUser/tasks → 404 when user not found
+- [x] POST /users → 201 with valid data (includes UUID id)
+- [x] POST /users → 400 when name missing
+- [x] POST /users → 400 when lastName missing
+- [x] POST /users → 400 when email missing
+- [x] POST /users → 400 when email format invalid
+- [x] POST /users → 409 when email already exists
+- [x] GET /users → 200 with list of users (includes pending tasks)
+- [x] GET /users → 200 empty array when no users
+- [x] GET /users/:idUser/tasks → 200 with user's tasks and completion status
+- [x] GET /users/:idUser/tasks → 404 when user not found
 
 **Commit message:** `feat(api): add user service, schemas, and routes for CRUD + task listing`
 
